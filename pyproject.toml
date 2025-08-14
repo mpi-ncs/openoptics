@@ -1,0 +1,19 @@
+[project]
+name = "openoptics"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.2.5",
+    "matplotlib>=3.10.5",
+    "mininet>=2.3.0.dev6",
+    "networkx>=3.5",
+    "thrift>=0.22.0",
+]
+
+[tool.setuptools]
+packages = [
+    "openoptics",
+    "openopticslib"
+]

@@ -1,0 +1,5 @@
+/build
+/tor_switch
+/*.pcap
+tswitch_runtime
+tor_switch_CLI

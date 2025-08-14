@@ -1,0 +1,25 @@
+{
+  "name": "openoptics",
+  "runArgs": [
+    "--privileged",
+    "--network", "host",
+    "--name", "openoptics",
+    "-v", "${localWorkspaceFolder}:/openoptics"
+  ],
+  "image": "ymlei/openoptics:latest",
+  "postStartCommand": "bash",
+  "overrideCommand": true,
+  "remoteUser": "root",
+	"workspaceFolder": "/openoptics",
+	"customizations": {
+    "vscode": {
+      //"settings": {
+      //  "extensions.verifySignature": false
+      //},
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-python.python"
+	    ]
+    }
+  }
+}

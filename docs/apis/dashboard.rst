@@ -1,0 +1,5 @@
+Dashboard
+==============
+
+.. automodule:: openoptics.Dashboard
+

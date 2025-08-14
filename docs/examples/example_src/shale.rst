@@ -1,0 +1,1 @@
+.. [1] `Shale: A Practical, Scalable Oblivious Reconfigurable Network <https://dl.acm.org/doi/10.1145/3651890.3672248>`_, SIGCOMM'24

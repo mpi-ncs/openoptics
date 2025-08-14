@@ -1,0 +1,370 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+<title>OpenOptics Dashboard</title>
+</head>
+<style>
+  html * {
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  .collapsible {
+    background-color: #6A9FB5;
+    color: white;
+    cursor: pointer;
+    padding: 2px;
+    padding-left: 18px;
+    padding-right: 18px;
+    width: 100%;
+    border: solid 1px black;
+    border-bottom: 0px;
+    text-align: left;
+    outline: none;
+    font-size: 12px;
+  }
+  
+  .active, .collapsible:hover {
+    background-color: #13213E;
+  }
+  
+  .content {
+    padding: 0 18px;
+    max-height: 0;
+    overflow: hidden;
+    background-color: #f1f1f1;
+  }
+
+  .sidebar {
+    height: 100%;
+    width: 9%;
+    float: left;
+    background-color: #6A9FB5;
+  }
+
+  .sidenav {
+    height:100%;
+    width:160px;
+    position: fixed;
+    z-index:1;
+    top:0;
+    left:0;
+    background-color: #6A9FB5;
+    overflow-x: :hidden;
+    overflow-y: scroll;
+    padding-left: 10px;
+    padding-top: 10px;
+    color: white;
+  }
+
+  .sidenav a:hover{
+    color:#f1f1f1;
+  }	
+
+  .scrollable-image-container {
+    height: 40vh;
+    overflow: auto;
+    text-align: center;
+    border: 1px solid #CACDD6;
+    background: #f8f9fa;
+    padding: 10px;
+  }
+
+  .main{
+    margin-left:160px;
+    padding: 0px 10px;
+  }
+
+  .monospace {
+    font-family: monospace;
+  }
+</style>
+<body>
+
+	<div class="sidenav">
+    <div class="image-container" style="text-align:center; margin-right: 10px;">
+    <img src="{% static 'logo.png' %}" style="max-height:50%; max-width:50%;">
+    <h2 style="margin-top:3px;">OpenOptics Dashboard</h2>
+    </div>
+    <div class="epochmenu">
+    {% for epoch in epochs %}
+    {% if current_epoch.id == epoch.id %}
+      <a href='/render/?epoch_id={{ epoch.id }}' style="color:#FFFFFF;">{{epoch.display_name}}</a>
+      <br>
+    {% else %}
+      <a href='/render/?epoch_id={{ epoch.id }}' style="color:#CACDD6;">{{epoch.display_name}}</a>
+      <br>
+    {% endif %}
+    {% endfor %}
+    <br>
+    </div>
+	</div>
+
+  <div class="main">
+    {% if epochs|length == 0 %}
+    <h2 style="text-align: center;">Welcome to the OpenOptics dashboard!</h2>
+    <p style="text-align: center;">Run an OpenOptics network instance to start seeing visualizations on this page.</p>
+    <p style="text-align: center;">Remember to set <span class="monospace">use_webserver</span> to <span class="monospace">True</span> when creating your network object.</p>
+    {% else %}
+    <div class="scrollable-image-container">
+      <img src="{{ topo_img_url }}" alt="Topology Image" style="height: 40vh; width: auto; display: block; margin: 0 auto; object-fit: contain;">
+    </div>
+    {% for metric in metrics %}
+    <div class="metric_block" style="margin-bottom: 10px; border-bottom: 1px solid black;">
+    {% for device in devices %}
+      <button class="collapsible">{{device}} {{metric}}</button>
+      <div class="content">
+        <br>
+        <canvas id="{{device}}-{{metric}}" style="padding-bottom:20px; width: 100%; height: 30vh;"></canvas>
+      </div>
+    {% endfor %}
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="text/javascript" src="chartjs-plugin-colorschemes.js"></script>
+<script>
+  var metrics = {{ metrics|safe }};
+
+  var coll = document.getElementsByClassName("collapsible");
+  var i;
+  for (i = 0; i < coll.length; i++) {
+    var button_text = coll[i].textContent || coll[i].innerText;
+    if (button_text.includes('total')) {
+      coll[i].nextElementSibling.style.maxHeight = coll[i].nextElementSibling.scrollHeight + "px";
+      coll[i].style.fontSize = '15px';
+      coll[i].style.paddingTop = '5px';
+      coll[i].style.paddingBottom = '5px';
+      coll[i].style.fontWeight = 'bold';
+      coll[i].classList.toggle("active");
+    }
+    coll[i].addEventListener("click", function() {
+      this.classList.toggle("active");
+      var content = this.nextElementSibling;
+      if (content.style.maxHeight){
+        content.style.maxHeight = null;
+      } else {
+        content.style.maxHeight = content.scrollHeight + "px";
+      } 
+    });
+  }
+
+  var colors = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b',
+    '#10b981', '#06b6d4', '#3b82f6', '#84cc16', '#f97316'
+  ]
+
+  //Prepare data for each chart (device+metric)
+  {% for metric in metrics %}
+
+    var {{metric}}_options = {
+      responsive: true,
+      //maintainAspectRatio: false,
+      //interaction: {
+      //  mode: 'index',
+      //  intersect: false,
+      //},
+      scales: {
+        x: {
+          type: 'linear',
+          title: {
+            display: true,
+            text: 'Timestep (s)',
+            font: {
+              size: 14,
+              weight: '600',
+              family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+            },
+            color: '#374151'
+          },
+          grid: {
+            color: '#f3f4f6',
+            borderColor: '#e5e7eb',
+            borderWidth: 1,
+            drawTicks: true,
+            tickLength: 8
+          },
+          ticks: {
+            color: '#6b7280',
+            font: {
+              size: 12,
+              family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+            },
+            padding: 8
+          }
+        },
+        y: {
+          title: {
+            display: true,
+            text: '{{metric}}',
+            font: {
+                size: 14,
+                weight: '600',
+                family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+              },
+              color: '#374151'
+          },
+          grid: {
+            display : true,
+            color: '#e5e7eb',
+            borderColor: '#d1d5db',
+            borderWidth: 1,
+            drawTicks: true,
+            tickLength: 8,
+            lineWidth: 1
+          },
+          ticks: {
+            color: '#6b7280',
+            font: {
+              size: 12,
+              family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+            },
+            padding: 8
+          }
+        }
+      },
+      plugins: {
+        legend: {
+            display: true,
+            position: 'top',
+            align: 'end',
+            labels: {
+              usePointStyle: true,
+              pointStyle: 'circle',
+              padding: 20,
+              font: {
+                size: 13,
+                weight: '500',
+                family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+              },
+              color: '#374151',
+              boxWidth: 8,
+              boxHeight: 8
+            }
+        }
+      },
+      elements: {
+        point: {
+          radius: 0,
+          hoverRadius: 0,
+          hitRadius: 0,
+          borderWidth: 2,
+          backgroundColor: '#ffffff'
+        },
+        line: {
+          borderWidth: 3,
+          tension: 0.1, // Smooth curves
+          borderCapStyle: 'round',
+          borderJoinStyle: 'round'
+        }
+      },
+      /*
+      animation: {
+        duration: 1500,
+        easing: 'easeInOutQuart'
+      },
+      hover: {
+        animationDuration: 300
+      }
+      */
+    };
+
+    Object.entries({{depth_json}}).forEach(([device, datasets]) => {
+      const canvasId = `${device}-{{metric}}`;
+      var ctx = document.getElementById(canvasId).getContext('2d');
+      var data = {
+        datasets: datasets.map((line, index) => ({
+          label: line.label,
+          data: //line.data,
+            line.data.map((value) => ({
+              x: value[0], // timestep
+              y: value[1]  // metric
+            })),
+          backgroundColor: colors[index % colors.length],
+          borderColor: colors[index % colors.length],
+          pointBackgroundColor: colors[index % colors.length],
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: colors[index % colors.length],
+          pointBorderWidth: 1,
+          borderWidth: 2,
+        }))
+      };
+
+      window[canvasId] = new Chart(ctx, {
+        type: 'line',
+        data: data,
+        options: {{metric}}_options
+      });
+
+    });
+
+  {% endfor %} // for each metric
+
+
+  var showing_epoch = {{current_epoch.id}};
+
+  const socket = new WebSocket('ws://' + window.location.host + '/ws/metrics/');
+  socket.onopen = () => console.log('[WebSocket] Connected');
+  socket.onerror = (error) => console.error('[WebSocket] Error:', error);
+
+  socket.onmessage = function(event) {
+
+    console.log('WebSocket message received.');
+
+    const data = JSON.parse(event.data);
+    console.log(data)
+    //console.log(window)
+
+    if (data.type === 'topo'){
+      console.log("Topology update");
+      topoImage = document.querySelector('.scrollable-image-container img');
+      topoImage.src = data.topo_image;
+      return;
+
+    } else if (data.epoch === showing_epoch) {
+      console.log(`type is ${data.type}`)
+      if (data.type === 'metric') {
+        {% for metric in metrics %}
+          if (!window[data.device_name + "-{{metric}}"]) {
+            console.warn("Chart not found:", data.device_name + "-{{metric}}");
+            return;
+          }
+
+          // Find the correct dataset (matching label)
+          const {{metric}}_dataset = window[data.device_name + "-{{metric}}"].data.datasets.find(ds => ds.label === data.label);
+          if (!{{metric}}_dataset) {
+            console.warn("Dataset not found for label:", data.label);
+            return;
+          }
+
+          // Push new data point
+          console.log({{metric}}_dataset.data);
+          {{metric}}_dataset.data.push({x: data.timestep, y: data.{{ metric }} });
+
+          if ({{metric}}_dataset.data.length > 30) {
+            {{metric}}_dataset.data.shift();
+          }
+
+          window[data.device_name + "-{{metric}}"].options.scales.x.min = 
+            {{metric}}_dataset.data[0].x;
+          window[data.device_name + "-{{metric}}"].options.scales.x.max = 
+            {{metric}}_dataset.data[{{metric}}_dataset.data.length-1].x;
+
+          window[data.device_name + "-{{metric}}"].update('quiet');
+        {% endfor %}
+      }
+    }
+
+  };
+
+  socket.onclose = function(event) {
+      console.error('WebSocket closed unexpectedly');
+  };
+</script>
+</body>
+</html>
+

@@ -1,0 +1,5 @@
+/build
+/optical_switch
+/*.pcap
+oswitch_runtime
+optical_switch_CLI

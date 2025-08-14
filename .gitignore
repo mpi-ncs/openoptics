@@ -1,0 +1,26 @@
+*.pyc
+*.cpython*
+__pycache__/
+.vscode/
+db.sqlite3
+graph_slices*.png
+migrations/
+behavioral-model/
+*.pcap
+
+# uv
+.ruff_cache
+.venv
+*egg-info
+openopticslib
+
+# C++
+*.so
+
+# Django stuff:
+*.log
+*.pot
+
+# Ignore Sphinx build output
+docs/_build/
+docs/generated/
