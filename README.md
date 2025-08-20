@@ -33,7 +33,7 @@ The Tofino-based backend will be released soon.
 ## Connect to Your Remote Machine
 If you're using a remote machine, set up port forwarding for viewing the OpenOptics dashboard.
 ```
-ssh -L8001:0.0.0.0:8001 YOUR_MACHINE
+ssh -L localhost:8001:localhost:8001 YOUR_MACHINE
 ```
 
 ## Get Pre-Build Docker Images and Project Code

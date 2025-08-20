@@ -8,7 +8,7 @@ If you're using a remote machine, set up port forwarding for viewing the OpenOpt
 
 .. code-block:: bash
 
-   ssh -L8001:0.0.0.0:8001 YOUR_MACHINE
+   ssh -L localhost:8001:localhost:8001 YOUR_MACHINE
 
 
 The easiest way to get started is to use OpenOptics Docker image.
@@ -138,7 +138,7 @@ To configure the OpenOptics web dashboard, navigate to ``src/dashboard`` and run
    bash init.sh
 
 Make sure to set ``use_webserver`` to true when creating your ``BaseNetwork`` object. 
-In your web browser, visit http://0.0.0.0:8001 to view the dashboard.
+In your web browser, visit http://localhost:8001 to view the dashboard.
 The dashboard displays the network topology, along with realtime graphs of network performance served via WebSockets. 
 
-Note: If you're running OpenOptics at a remote machine, make sure to enable port forwarding by passing ``-L8001:0.0.0.0:8001`` to ssh.
+Note: If you're running OpenOptics at a remote machine, make sure to enable port forwarding by passing ``-L localhost:8001:localhost:8001`` to ssh.

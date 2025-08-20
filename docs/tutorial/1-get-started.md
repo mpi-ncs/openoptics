@@ -6,7 +6,7 @@ This tutorial guides you through running a pre-written script to deploy a simple
 First, log in to your VM. The `-L` flag forwards the port for the web dashboard, allowing you to access it from your local machine.
 
 ```bash
-ssh -L8001:0.0.0.0:8001 root@sigcomm-tutorial-X
+ssh -L localhost:8001:localhost:8001 root@sigcomm-tutorial-X
 ```
 
 If you are using VS Code with Remote Development, you can also use this command to connect your editor to the VM.

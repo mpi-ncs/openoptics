@@ -14,12 +14,12 @@ Host tutorial-0
     User root
     ProxyJump contact
     ForwardAgent yes
-    LocalForward 8001 0.0.0.0:8001
+    LocalForward localhost:8001 localhost:8001
 ```
 
 ## or with bash
 ```
-ssh -L8001:0.0.0.0:8001 -A root@sigcomm-tutorial-X
+ssh -L localhost:8001:localhost:8001 -A root@sigcomm-tutorial-X
 ```
 
 # Install Docker

@@ -141,7 +141,7 @@ class BaseNetwork:
             )
             self.dashboard.start()
             os.system(
-                "python3 /openoptics/openoptics/dashboard/manage.py runserver 0.0.0.0:8001 > /dev/null 2>&1 &"
+                "python3 /openoptics/openoptics/dashboard/manage.py runserver localhost:8001 > /dev/null 2>&1 &"
             )
             print("Access dashboard at http://localhost:8001")
 
