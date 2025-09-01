@@ -14,7 +14,7 @@ if __name__ == "__main__":
     nb_link = 1
 
     net = Toolbox.BaseNetwork(
-        name="TA",
+        name="task6-ta",
         backend="Mininet",
         nb_node=nb_node,
         nb_link=nb_link,

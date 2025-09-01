@@ -14,7 +14,7 @@ if __name__ == "__main__":
     nb_link = 1
 
     net = Toolbox.BaseNetwork(
-        name="TA",
+        name="task6-ta",
         backend="Mininet",
         nb_node=nb_node,
         nb_link=nb_link,
@@ -30,8 +30,5 @@ if __name__ == "__main__":
     net.deploy_routing(paths, routing_mode="Per-hop", arch_mode="TA", start_fresh=True)
 
     net.start_traffic_aware(
-        OpticalTopo.bipartite_matching,
-        OpticalRouting.routing_direct_ta,
-        routing_mode="Per-hop",
         update_interval=2,
     )

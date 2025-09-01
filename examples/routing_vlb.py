@@ -19,7 +19,7 @@ if __name__ == "__main__":
     circuits = OpticalTopo.round_robin(nb_node=nb_node)
     assert net.deploy_topo(circuits)
 
-    paths = OpticalRouting.routing_vlb(net.slice_to_topo, net.tor_ocs_ports)
+    paths = OpticalRouting.routing_vlb(net.get_topo(), net.tor_ocs_ports)
     # for path in paths:
     #    print(path)
     assert net.deploy_routing(paths, routing_mode="Source")

@@ -21,7 +21,7 @@ if __name__ == "__main__":
     circuits = OpticalTopo.opera(nb_node=node_nb, nb_link=nb_link)
     assert net.deploy_topo(circuits)
 
-    paths = OpticalRouting.routing_ksp(net.slice_to_topo)
+    paths = OpticalRouting.routing_ksp(net.get_topo())
     net.deploy_routing(paths, routing_mode="Source")
 
     net.start()

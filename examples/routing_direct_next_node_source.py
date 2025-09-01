@@ -18,7 +18,7 @@ if __name__ == "__main__":
     # print(circuits)
     assert net.deploy_topo(circuits)
 
-    paths = OpticalRouting.routing_direct_next_node(net.slice_to_topo)
+    paths = OpticalRouting.routing_direct_next_node(net.get_topo())
     net.deploy_routing(paths, routing_mode="Source")
 
     net.start()

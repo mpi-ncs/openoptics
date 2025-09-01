@@ -21,7 +21,7 @@ from mininet.topo import Topo
 from mininet.link import Link
 from .p4_mininet import P4Switch, P4Host
 
-from typing import List
+from typing import List, Union
 
 
 class BaseNetwork:
@@ -41,7 +41,7 @@ class BaseNetwork:
         name,
         nb_node,
         nb_link=1,
-        nb_host=1,
+        nb_host_per_tor=1,
         backend="Mininet",
         time_slice_duration_ms=128,
         arch_mode="TO",  # TO for traffic-oblivious, TA for traffic-aware
@@ -55,7 +55,7 @@ class BaseNetwork:
             backend (str): Backend of OpenOptics. "Mininet", "Testbed", or "ns3"
             nb_node (int): Number of nodes in the network
             nb_link (int, optional): Number of links per node (defaults to 1)
-            nb_host (int, optional): Number of hosts per ToR (defaults to 1)
+            nb_host_per_tor (int, optional): Number of hosts per ToR (defaults to 1)
             time_slice_duration_ms (int, optional): Duration of each time slice in milliseconds (defaults to 128)
             arch_mode (str, optional): architecture mode: "TO" or "TA" (defaults to "TO")
             use_webserver (bool, optional): Whether to use web server for dashboard (defaults to True)
@@ -79,7 +79,7 @@ class BaseNetwork:
         self.mininet_net = None
         self.nb_node = nb_node
         self.nb_link = nb_link
-        self.nb_hosts = nb_host  # Number of hosts for each ToR
+        self.nb_host_per_tor = nb_host_per_tor  # Number of hosts for each ToR
         self.ip_to_tor = {}
         self.nodes_created = False
 
@@ -151,7 +151,7 @@ class BaseNetwork:
 
         Launches the command-line interface for interacting with the network.
         """
-        OpticalCLI(self.device_manager, self.mininet_net)
+        OpticalCLI(self)
 
     def stop_network(self):
         """
@@ -226,7 +226,7 @@ class BaseNetwork:
             self.thrift_port += 1
 
             # Connect hosts to ToR switches
-            for _ in range(self.nb_hosts):  # Default to 1
+            for _ in range(self.nb_host_per_tor):  # Default to 1
                 ip = f"10.0.{tor_id}.1"  # To-do: make it configurable in setting
                 mac = "00:aa:bb:00:00:%02x" % tor_id
                 host = self.mininet_topo.addHost("h" + str(tor_id), ip=ip, mac=mac)
@@ -344,7 +344,7 @@ class BaseNetwork:
         self.stop_network()
 
     def start_traffic_aware(
-        self, topo_func, routing_func, routing_mode, update_interval=1
+        self, topo_func=None, routing_func=None, routing_mode=None, update_interval=1
     ) -> bool:
         """Deploy traffic aware architecture.
 
@@ -372,30 +372,31 @@ class BaseNetwork:
         self.start_monitor()
 
         # initialize active calendar queue.
-        self.pause_calendar_queue()
+        self.activate_calendar_queue()
 
         def evolve():
             prev_circuits = []
             while not stop_event.is_set():
                 metric = self.device_manager.get_device_metric()
                 traffic_matrix = utils.metric_to_matrix(metric)
-                circuits = topo_func(
-                    nb_node=self.nb_node,
-                    nb_link=self.nb_link,
-                    traffic_matrix=traffic_matrix,
-                    prev_circuits=prev_circuits,
-                )
+                if topo_func:
+                    circuits = topo_func(
+                        nb_node=self.nb_node,
+                        nb_link=self.nb_link,
+                        traffic_matrix=traffic_matrix,
+                        prev_circuits=prev_circuits,
+                    )
 
-                # Only re-deploy topology if there is a change
-                if prev_circuits != circuits:
-                    prev_circuits = circuits
-                    self.pause_calendar_queue()
+                    # Only re-deploy topology if there is a change
+                    if prev_circuits != circuits:
+                        prev_circuits = circuits
+                        self.pause_calendar_queue()
 
-                    assert self.deploy_topo(circuits, start_fresh=True)
-                    # Now we have a static dst to queue mapping, so don't need to re-deploy routing.
-                    # paths = routing_func(self.slice_to_topo)
-                    # self.deploy_routing(paths, routing_mode, arch_mode="TA", start_fresh=True)
-                    self.activate_calendar_queue()
+                        assert self.deploy_topo(circuits, start_fresh=True)
+                        # Now we have a static dst to queue mapping, so don't need to re-deploy routing.
+                        # paths = routing_func(self.slice_to_topo)
+                        # self.deploy_routing(paths, routing_mode, arch_mode="TA", start_fresh=True)
+                        self.activate_calendar_queue()
 
                 stop_event.wait(timeout=update_interval)
 
@@ -454,12 +455,6 @@ class BaseNetwork:
                         range(self.nb_node)
                     )
 
-        self.slice_to_topo[time_slice].add_edge(node1, node2, port1=port1, port2=port2)
-        if unidirectional == False:
-            self.slice_to_topo[time_slice].add_edge(
-                node2, node1, port1=port2, port2=port1
-            )
-
         nodes = self.slice_to_topo[time_slice].nodes
         # Now we assume links are all bidirectional or all unidirectional.
         # So we only check for one direction.
@@ -470,18 +465,22 @@ class BaseNetwork:
             nodes[node1][port1] = True  # Keep track of port's occupancy
             nodes[node2][port2] = True
             # print(f"Time slice {time_slice} Connect node {node1} port {port1} to node {node2} port {port2} ")
+
+            self.slice_to_topo[time_slice].add_edge(node1, node2, port1=port1, port2=port2)
+            if unidirectional == False:
+                self.slice_to_topo[time_slice].add_edge(
+                    node2, node1, port1=port2, port2=port1
+                )
             return True
+
         else:
             print(
                 f"Port(s) occupied: Time slice {time_slice} can NOT connect node {node1} port {port1} to node {node2} port {port2} "
             )
-            self.slice_to_topo[time_slice].remove_edge(node1, node2)
-            if unidirectional == False:
-                self.slice_to_topo[time_slice].remove_edge(node2, node1)
             return False
 
     def disconnect(
-        self, node1, port1, node2, port2, time_slice, unidirectional=False
+        self, time_slice, node1, node2, port1=0, port2=0, unidirectional=False
     ) -> bool:
         """
         Disconnect two node ports at the given time slice.
@@ -499,24 +498,48 @@ class BaseNetwork:
         """
         nodes = self.slice_to_topo[time_slice].nodes
 
-        assert self.slice_to_topo[time_slice].remove_edge(
-            node1, node2, port1=port1, port2=port2
-        )
+
+        if time_slice not in self.slice_to_topo.keys():
+            print(f"Time slice {time_slice} not found.")
+            return False
+        
+        if self.slice_to_topo[time_slice].has_edge(node1, node2) == False:
+            print(
+                f"Time slice {time_slice} does not have edge between node {node1} and node {node2}."
+            )
+            return False
+
+        if nodes[node1][port1] == False:
+            print(
+                f"Node {node1} Port {port1} is not the correct port connected to node {node2}."
+            )
+            return False
+        
+        if nodes[node2][port2] == False:
+            print(
+                f"Node {node2} Port {port2} is not the correct port connected to node {node1}."
+            )
+            return False
+        
         nodes[node1][port1] = False
         nodes[node2][port2] = False
 
+        self.slice_to_topo[time_slice].remove_edge(
+            node1, node2
+        )
+
         if unidirectional == False:
-            assert self.slice_to_topo[time_slice].remove_edge(
-                node2, node1, port1=port2, port2=port1
+            self.slice_to_topo[time_slice].remove_edge(
+                node2, node1
             )
 
-        return self.slice_to_topo[time_slice].remove_edge(
-            node1, node2, port1=port1, port2=port2
-        )
+        return True
 
     def deploy_topo(self, circuits=[], start_fresh=False) -> bool:
         """
-        Create nodes and ocs schedules based on given circuits or existing slice_to_topo variable (updated by connect() before).
+        Create ocs schedules based on given circuits or existing slice_to_topo variable (updated by connect() before),
+        and load them to OCS.
+        Create nodes in the backend if it is the first time deploy_topo is called.
 
         Args:
             circuits (list, optional): A list of tuples (time_slice, node1, node2, port1, port2). Defaults to [].
@@ -525,14 +548,9 @@ class BaseNetwork:
         Returns:
             bool: Whether the given circuits are successfully deployed.
         """
+
         if start_fresh:
-            print("Loading optical topologies...")
             self.slice_to_topo = {}
-            utils.clear_table(
-                backend=self.backend,
-                switch=self.mininet_net.nameToNode["ocs"],
-                table_name="MyIngress.ocs_schedule",
-            )
 
         for time_slice, node1, node2, port1, port2 in circuits:
             if not self.connect(time_slice, node1, node2, port1, port2):
@@ -550,11 +568,18 @@ class BaseNetwork:
             self.create_nodes()
             self.nodes_created = True
 
+        print("Deploying new optical topologies...")
+            
+        utils.clear_table(
+            backend=self.backend,
+            switch=self.mininet_net.nameToNode["ocs"],
+            table_name="MyIngress.ocs_schedule",
+        )
         self.setup_ocs()
 
         return True
 
-    def get_topo(self, time_slice) -> nx.Graph:
+    def get_topo(self, time_slice=None) -> nx.Graph:
         """
         Get the topology (nx.Graph) at the given time slice.
 
@@ -565,6 +590,9 @@ class BaseNetwork:
             nx.Graph: The network topology at the given time slice, or None if not found
         """
 
+        if time_slice is None:
+            return self.slice_to_topo
+        
         if time_slice not in self.slice_to_topo.keys():
             print("Time slice not found.")
             return None
@@ -614,26 +642,31 @@ class BaseNetwork:
     ##########################
 
     def add_time_flow_entry(
-        self, node_id, entries: List[TimeFlowEntry], routing_mode="Per-hop"
+        self, node_id, entries: Union[List[TimeFlowEntry],TimeFlowEntry], routing_mode="Per-hop"
     ) -> bool:
         """
         Add the time flow entry(s) to the node.
 
         Args:
             node_id (int): The node to add entries to
-            entries (List[TimeFlowEntry]): The list of TimeFlowEntry
+            entries (TimeFlowEntry or List[TimeFlowEntry]): A TimeFlowEntry or a list of TimeFlowEntry
             routing_mode (str): Source or Per-hop
 
         Returns:
             bool: Whether the entries were successfully added.
         """
+        if isinstance(entries, TimeFlowEntry):
+            entries = [entries]
+        elif not isinstance(entries, list):
+            raise ValueError("entries must be a TimeFlowEntry or a list of TimeFlowEntry")
+        
         commands = ""
         if routing_mode == "Source":
             for entry in entries:
-                commands += utils.tor_table_routing_source(entry)
+                commands += utils.tor_table_routing_source(entry, nb_time_slices=self.nb_time_slices)
         elif routing_mode == "Per-hop":
             for entry in entries:
-                commands += utils.tor_table_routing_per_hop(entry)
+                commands += utils.tor_table_routing_per_hop(entry, nb_time_slices=self.nb_time_slices)
         else:
             assert False, "Unsupported routing mode"
 
@@ -641,7 +674,8 @@ class BaseNetwork:
             print(f"Error: Try deploying paths to non-existent node: node{node_id}.")
             return False
 
-        node = self.mininet_net.nameToNode[f"tor{node_id}"]  # sw[0] is ocs
+        node = self.mininet_net.nameToNode[f"tor{node_id}"]
+        print(f"Load to ToR{node_id}:\n {commands}")
         return utils.load_table(self.backend, node, commands)
 
     def deploy_routing(

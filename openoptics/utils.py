@@ -47,7 +47,7 @@ def path2entries(
                         cur_node=step.cur_node,
                         # In TA, packets for each dst has a dedicated queue.
                         send_ts=step.send_ts if arch_mode == "TO" else path.dst,
-                        send_port_or_node=step.send_port,
+                        send_port=step.send_port,
                     )
                 )
             elif step.step_type == "node":
@@ -56,7 +56,7 @@ def path2entries(
                 )
                 hops.append(
                     TimeFlowHop(
-                        cur_node=step.cur_node, send_port_or_node=step.send_node
+                        cur_node=step.cur_node, send_node=step.send_node
                     )
                 )
         if path.src not in entries.keys():
@@ -258,31 +258,42 @@ def tor_table_cal_port_slice_to_node(
     return commands
 
 
-def tor_table_routing_source(entry: TimeFlowEntry):
+def tor_table_routing_source(entry: TimeFlowEntry, nb_time_slices=None):
     """
     Generate table entries for source routing
 
     Args:
         entry: TimeFlowEntry object containing routing information
+        nb_time_slices: Number of time slices. For generating entries for all time slices with wildcard arrival time slice.
 
     Returns:
         str: CLI commands for source routing entries
     """
-
     hop_count = len(entry.hops)
-    return (
-        f"table_add add_source_routing_entries write_ssrr_header_{hop_count - 1} "
-        f"{entry.dst} {entry.arrival_ts} => "
-        f"{' '.join(f'{hop.cur_node} {hop.send_ts} {hop.send_port_or_node}' for hop in entry.hops)} \n"
-    )
+
+    if entry.arrival_ts is None:
+        return "".join([
+            f"table_add add_source_routing_entries write_ssrr_header_{hop_count - 1} "
+            f"{entry.dst} {arrival_ts} => "
+            f"{' '.join(f'{hop.cur_node} {arrival_ts} {hop.send_port_or_node}' for hop in entry.hops)} \n"
+            for arrival_ts in range(nb_time_slices)
+        ])
+    
+    else:
+        return (
+            f"table_add add_source_routing_entries write_ssrr_header_{hop_count - 1} "
+            f"{entry.dst} {entry.arrival_ts} => "
+            f"{' '.join(f'{hop.cur_node} {hop.send_ts} {hop.send_port_or_node}' for hop in entry.hops)} \n"
+        )
 
 
-def tor_table_routing_per_hop(entry: TimeFlowEntry):
+def tor_table_routing_per_hop(entry: TimeFlowEntry, nb_time_slices=None):
     """
     Generate table entries for per-hop routing
 
     Args:
         entry: TimeFlowEntry object containing routing information
+        nb_time_slices: Number of time slices. For generating entries for all time slices with wildcard arrival time slice.
 
     Returns:
         str: CLI commands for per-hop routing entries
@@ -293,11 +304,22 @@ def tor_table_routing_per_hop(entry: TimeFlowEntry):
             f"Warning: Find multi-hop time flow entry ({entry}) in Per-hop forwarding mode. Trim following hops."
         )
     hop = entry.hops[0]
-    return (
-        f"table_add per_hop_routing write_time_flow_entry "
-        f"{entry.dst} {entry.arrival_ts} => "
-        f"{hop.cur_node} {hop.send_ts} {hop.send_port_or_node}\n"
-    )
+    
+    if entry.arrival_ts is None:
+        # Flow table with wildcard arrival time slice
+        return "".join([
+            f"table_add per_hop_routing write_time_flow_entry "
+            f"{entry.dst} {arrival_ts} => "
+            f"{hop.cur_node} {arrival_ts} {hop.send_port_or_node}\n"
+            for arrival_ts in range(nb_time_slices)
+        ])
+    else:
+        # Regular time flow table
+        return (
+            f"table_add per_hop_routing write_time_flow_entry "
+            f"{entry.dst} {entry.arrival_ts} => "
+            f"{hop.cur_node} {hop.send_ts} {hop.send_port_or_node}\n"
+        )
 
 
 def gen_tor_commands(tor_id, slices, port_to_ip, num_hosts, offset):

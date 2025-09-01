@@ -15,9 +15,14 @@ The easiest way to get started is to use OpenOptics Docker image.
 
 .. code-block:: bash
 
-   docker pull ymlei/openoptics:latest
+   sudo docker pull ymlei/openoptics:latest
 
 Then clone and enter the repository folder.
+
+.. code-block:: bash
+   
+   git clone https://github.com/mpi-ncs/openoptics.git
+   cd openoptics
 
 Enter the Container
 -------------------
@@ -34,11 +39,11 @@ Or with bash
 .. code-block:: bash
 
    cd /openoptics
-   docker run --privileged -dit --network host \
+   sudo docker run --privileged -dit --network host \
      --name openoptics \
      -v "$PWD:/openoptics" \
-     openoptics /bin/bash
-   docker exec -it openoptics bash
+     ymlei/openoptics:latest /bin/bash
+   sudo docker exec -it openoptics bash
 
 Initialize the Dashboard
 ------------------------
@@ -69,7 +74,7 @@ Then you can try ping in your optical DCN,
 Defining Your Own Optical DCN with Python APIs
 ----------------------------------------------
 
-.. image:: assets/openoptics-diagram.png
+.. image:: ../assets/openoptics-diagram.png
    :alt: OpenOptics Diagram
 
 OpenOptics User APIs are located in ``openoptics/Toolbox.py``.
@@ -114,7 +119,7 @@ Or use provided high-level routing generators:
 
 .. code-block:: python
 
-   paths = OpticalRouting.routing_direct(net.slice_to_topo)
+   paths = OpticalRouting.routing_direct(net.get_topo())
    net.deploy_routing(paths, routing_mode="Per-hop")
 
 Once you have created a ``BaseNetwork`` object, and defined its topology and routing, start the network by simply calling ``net.start()``.

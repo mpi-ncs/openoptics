@@ -56,7 +56,8 @@ def static_topo(nb_node, nb_link=1):
     return circuits
 
 
-def round_robin(nb_node=None, nodes=None, port1=0, port2=0, self_loop=False) -> list:
+def round_robin(nb_node=None, nodes=None, port1=0, port2=0, 
+                start_time_slice = 0, self_loop=False) -> list:
     """
     Create a round-robin topology with the circle method. Assume one upper link per node.
 
@@ -66,10 +67,12 @@ def round_robin(nb_node=None, nodes=None, port1=0, port2=0, self_loop=False) -> 
                 Otherwise create round-robin within given nodes.
         port1: The port src node uses to connect. 0 by default
         port2: The port dst node uses to connect. 0 by default
-        self_loop: Whether to add loop-back time slice.
+        start_time_slice: The time slice to start the topology schedule. 0 by default.
+        self_loop: Whether to add loop-back time slice. Used for building complex topology.
 
     Returns:
         A list of circuits.
+        Circuit: [time_slice, node1, node2, port1, port2]
     """
 
     if nodes is None:
@@ -92,13 +95,13 @@ def round_robin(nb_node=None, nodes=None, port1=0, port2=0, self_loop=False) -> 
             if nodes[i] == -1 or nodes[-i - 1] == -1:
                 # does not connect dummy node
                 continue
-            circuits.append([slice_id, nodes[i], nodes[-i - 1], port1, port2])
+            circuits.append([start_time_slice + slice_id, nodes[i], nodes[-i - 1], port1, port2])
         nodes.insert(1, nodes.pop(-1))
 
     # Add a loop-back time slice for being the building block of more complex topology
     if self_loop:
         for node_id in range(nb_node):
-            circuits.append([nb_node - 1, nodes[node_id], nodes[node_id], port1, port2])
+            circuits.append([start_time_slice + nb_node - 1, nodes[node_id], nodes[node_id], port1, port2])
 
     return circuits
 
@@ -341,6 +344,13 @@ def draw_topo(slice_to_topo):
     """
     nb_time_slices = len(slice_to_topo)
     pos = nx.circular_layout(sorted(slice_to_topo[0].nodes))
+
+    xs = [p[0] for p in pos.values()]
+    ys = [p[1] for p in pos.values()]
+    pad = 0.15
+    xlim = (min(xs) - pad, max(xs) + pad)
+    ylim = (min(ys) - pad, max(ys) + pad)
+
     fig, axs = plt.subplots(1, nb_time_slices)
 
     if nb_time_slices == 1:
@@ -360,6 +370,8 @@ def draw_topo(slice_to_topo):
         )
         ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
         ax.axis("on")
+        ax.set_xlim(*xlim)           # <-- fixed viewport
+        ax.set_ylim(*ylim)           # <-- fixed viewport
         ax.set_xticks([])
         ax.set_yticks([])
         ax.set_title(f"time slice={time_slice}")

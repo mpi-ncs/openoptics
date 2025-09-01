@@ -18,8 +18,8 @@ if __name__ == "__main__":
     # print(circuits)
     assert net.deploy_topo(circuits)
 
-    paths = OpticalRouting.find_direct_path(net.slice_to_topo, node1=0, node2=1)
-    paths.extend(OpticalRouting.find_direct_path(net.slice_to_topo, node1=1, node2=0))
+    paths = OpticalRouting.find_direct_path(net.get_topo(), node1=0, node2=1)
+    paths.extend(OpticalRouting.find_direct_path(net.get_topo(), node1=1, node2=0))
     # for path in paths:
     # print(str(path))
     net.deploy_routing(paths, routing_mode="Per-hop")

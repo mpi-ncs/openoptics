@@ -41,7 +41,7 @@ Install [docker](https://docs.docker.com/engine/install/) if you haven't already
 Then clone the project repo and pull the pre-build development Docker image.
 ```
 git clone https://github.com/mpi-ncs/openoptics.git
-docker pull ymlei/openoptics:latest
+sudo docker pull ymlei/openoptics:latest
 ```
 
 ## Enter OpenOptics Environment with VS Code
@@ -52,11 +52,11 @@ With Docker and the VS Code Dev Containers extension installed, simply press Ctr
 ## Or Enter OpenOptics Environment with Bash
 ```
 cd openoptics/
-docker run --privileged -dit --network host \
+sudo docker run --privileged -dit --network host \
   --name openoptics \
   -v "$PWD:/openoptics" \
   ymlei/openoptics:latest /bin/bash
-docker exec -it openoptics bash
+sudo docker exec -it openoptics bash
 ```
 
 ## Build Docker Image or Build from Source
@@ -122,7 +122,7 @@ net.deploy_topo(circuits)
 Next, you can define routing by adding time-flow table entries (as forwarding tables in electrical DCNs) `add_time_flow_entry(node_id, entries, routing_mode)`.
 Or use provided high-level routing generators:
 ```python
-paths = OpticalRouting.routing_direct(net.slice_to_topo)
+paths = OpticalRouting.routing_direct(net.get_topo())
 net.deploy_routing(paths, routing_mode="Per-hop")
 ```
 

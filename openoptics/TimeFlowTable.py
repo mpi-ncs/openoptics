@@ -8,16 +8,22 @@
 # License text: Creative Commons NC BY SA 4.0
 # https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en
 
-from typing import List
+from typing import List, Union
 
+# Time flow table related classes:
+# TimeFlowHop: A hop in a time flow entry.
+# TimeFlowEntry: An entry in a time flow table.
 
 class TimeFlowHop:
     """
     A hop in a time flow entry.
 
     Attributes:
-        cur_node: Current node identifier
-        send_port_or_node: Port or node to send packets to
+        cur_node: Current node id, for the purpose of checking if the current node is where the packet is supposed to be sent to.
+            If not specified, do not perform the check.
+        send_port: Port to send packets to. Default to None, meaning send to a random port.
+        send_node: Node to send packets to, only valid if send_port is None. Default to None, meaning send to a random node.
+        send_port_or_node: Port or node to send packets to.
         send_ts: Time slice to send packets
     """
 
@@ -26,29 +32,31 @@ class TimeFlowHop:
         cur_node=None,
         send_port=None,
         send_node=None,
-        send_port_or_node=None,
-        send_ts=255,
+        send_ts=None,
     ):
         """
         Initialize a TimeFlowHop.
 
         Args:
-            cur_node: Current node identifier
-            send_port: Port to send packets to
-            send_node: Node to send packets to
-            send_port_or_node: Port or node to send packets to (alternative parameter)
-            send_ts: Time slice to send packets, defaults to 255
+            cur_node: Current node id, for the purpose of checking if the current node is where the packet is supposed to be sent to.
+                If not specified, do not perform the check.
+            send_port: Port to send packets to. Default to None, meaning send to a random port.
+            send_node: Node to send packets to, only valid if send_port is None. Default to None, meaning send to a random node.
+            send_ts: Time slice to send packets, defaults to None
         """
         # desired next hop is for source routing to check missing slice
-        self.cur_node = cur_node
+        if cur_node is None:
+            self.cur_node = 255 # Do not perform checking if the packet is delivered to the desired node.
+        else:
+            self.cur_node = cur_node
         if send_port is not None:
             self.send_port_or_node = send_port
+            self.send_ts = send_ts
         elif send_node is not None:
             self.send_port_or_node = send_node
+            self.send_ts = 255 # if send_ts is 255 means this hop is indexed by node.
         else:
-            self.send_port_or_node = send_port_or_node
-
-        self.send_ts = send_ts  # if send_ts 255 means this hop is indexed by node.
+            raise ValueError("Must specify either send_port or send_node")
 
     def __str__(self):
         """
@@ -57,10 +65,14 @@ class TimeFlowHop:
         Returns:
             str: Formatted string with hop information
         """
-        return (
-            f"Current node: {self.cur_node} send slice: {self.send_ts} via port {self.send_port_or_node} "
-            f"optional next node:{self.send_port_or_node})"
-        )
+        if self.send_ts == 255: # send to a specific node
+            return (
+                f"Current node: {self.cur_node} send to next node {self.send_port_or_node} "
+            )
+        else: # send to a port at a specific time slice
+            return (
+                f"Current node: {self.cur_node} send slice: {self.send_ts} via port {self.send_port_or_node} "
+            )
 
     def __repr__(self):
         """
@@ -79,23 +91,28 @@ class TimeFlowEntry:
 
     Attributes:
         dst: The destination node
-        arrival_ts: The arrival time slice
+        arrival_ts: The arrival time slice. If not specified, it's wildcard.
         hops: A list of hops
     """
 
-    def __init__(self, dst, arrival_ts=None, hops: List[TimeFlowHop] = None):
+    def __init__(self, dst, arrival_ts=None, hops: Union[List[TimeFlowHop], TimeFlowHop]= None):
         """
         Initialize a TimeFlowEntry.
 
         Args:
             dst: The destination node
-            arrival_ts: The arrival time slice
-            hops: A list of TimeFlowHop objects
+            arrival_ts: The arrival time slice. If not specified, it's wildcard.
+            hops: A list of hops
         """
         # desired node is for source routing to check missing slice
         self.dst = dst
         self.arrival_ts = arrival_ts
-        self.hops = hops
+        if isinstance(hops, TimeFlowHop):
+            self.hops = [hops]
+        elif isinstance(hops, list):
+            self.hops = hops
+        else:
+            raise ValueError("hops must be a TimeFlowHop or a list of TimeFlowHop")
 
     def __str__(self):
         """

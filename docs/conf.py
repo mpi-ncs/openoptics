@@ -98,5 +98,5 @@ autodoc_mock_imports = [
 ]
 
 exclude_patterns = [
-    "tutorial/*",
+    #"tutorials/*",
 ]

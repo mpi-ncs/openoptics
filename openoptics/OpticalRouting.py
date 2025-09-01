@@ -39,8 +39,8 @@ def find_direct_path(
     slice_to_topo: Dict[int, nx.Graph], node1: int, node2: int
 ) -> List[Path]:
     """
-    Helper function to find the direct path between two nodes.
-    Used by direct routing and VLB.
+    Helper function to find the direct paths between two nodes for all time slices.
+    Can be used by direct routing and VLB.
 
     Args:
         slice_to_topo: Dictionary mapping time slices to topology graphs
@@ -227,7 +227,7 @@ def find_n_hop_path_node_pair(slice_to_topo: Dict[int, nx.Graph], src, dst, max_
                         f"Node {neighbor} has been visited in the path {cur_path}. Skip."
                     )
 
-    # print(f"Paths: {paths}")
+    #print(f"Paths: {paths}")
     # paths we get have discrete arrival time slice, we need to generate paths for all time slice
     extended_paths = extend_paths_to_all_time_slice(paths, nb_ts)
     # print(f"Extended paths: {extended_paths}")

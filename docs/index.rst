@@ -32,7 +32,7 @@ which are then deployed to the underlying optical and P4-programmable switches.
    net = Toolbox.BaseNetwork(nb_node = nb_node, time_slice_duration_ms = 512, backend="Mininet")
    circuits = OpticalTopo.round_robin(nb_node=nb_node)
    net.deploy_topo(circuits)
-   paths = OpticalRouting.routing_direct(net.slice_to_topo)
+   paths = OpticalRouting.routing_direct(net.get_topo())
    net.deploy_routing(paths)
    net.start()
 
@@ -49,12 +49,10 @@ The Tofino-based backend will be released soon.
 
    quickstart
    installation
-
    examples/examples
+   tutorials/tutorial_index
    apis_index
    about
-.. 
-   tutorial/tutorial_index
 
 ..
    Indices and tables
