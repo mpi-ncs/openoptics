@@ -272,6 +272,9 @@ Did you allocate more connections within groups than across groups?")
 
         print("Bonus running... (~2s)")
         rtts = get_rtt_from_ping(self.mn.hosts[0], self.mn.hosts[5], interval=0.1, nb_pkt=20, timeout=2)
+        if len(rtts) == 0: # No packets received
+            print("Failed because of packet loss.")
+            return
         tail_rtt = int(np.percentile(rtts, 99))
         print(f"Bonus: h0-h5's tail RTT: {tail_rtt}ms")
 
@@ -279,6 +282,10 @@ def get_rtt_from_ping(node1, node2, interval=1, nb_pkt=10, timeout=1):
     rtt_re = re.compile(
         r"time=(\d+)\s+ms"
     )
+
+    packets_re = re.compile(
+            r'(?P<transmitted>\d+) packets transmitted, (?P<received>\d+) received'
+        )
     
     popens = {}
     rtts = []
@@ -287,7 +294,14 @@ def get_rtt_from_ping(node1, node2, interval=1, nb_pkt=10, timeout=1):
 
     for host, line in pmonitor(popens):
         #print(f"{host}: {line}")
-                
+        
+        packets_match = packets_re.search(line)
+        if packets_match: 
+            transmitted = int(packets_match['transmitted'])
+            received = int(packets_match['received'])
+            if transmitted - received > 1: # There is chance for one packet loss
+                print(f"Host: {host}: packet loss!")
+
         # Extract data
         rtt_match = rtt_re.search(line)
         if rtt_match:
