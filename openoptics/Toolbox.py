@@ -568,7 +568,7 @@ class BaseNetwork:
             self.create_nodes()
             self.nodes_created = True
 
-        print("Deploying new optical topologies...")
+        print("Deploying optical topologies...")
             
         utils.clear_table(
             backend=self.backend,
@@ -675,7 +675,7 @@ class BaseNetwork:
             return False
 
         node = self.mininet_net.nameToNode[f"tor{node_id}"]
-        print(f"Load to ToR{node_id}:\n {commands}")
+        #print(f"Load to ToR{node_id}:\n {commands}")
         return utils.load_table(self.backend, node, commands)
 
     def deploy_routing(

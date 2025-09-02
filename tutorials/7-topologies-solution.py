@@ -46,8 +46,7 @@ if __name__ == "__main__":
         use_webserver=True,
     )
 
-    circuits = OpticalTopo.round_robin(nb_node=nb_node)
-    #circuits = my_topology(nb_node)
+    circuits = my_topology(nb_node)
     assert net.deploy_topo(circuits)
 
     paths = OpticalRouting.routing_direct(net.get_topo())

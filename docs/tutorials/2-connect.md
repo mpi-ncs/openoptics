@@ -1,6 +1,6 @@
 # Tutorial 2: Connect Nodes with Time-Sliced Topologies
 
-In optical data center networks, topologies are determined by the internal connections of optical circuit switches (OCS).
+In optical DCNs, topologies are determined by the internal connections of optical circuit switches (OCS).
 
 As in the following figure:
 

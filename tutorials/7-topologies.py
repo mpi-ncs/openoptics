@@ -15,18 +15,25 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from openoptics import Toolbox, OpticalTopo, OpticalRouting
 
-"""
-Circuit:
-[time_slice, node1, node2, port1, port2]
-"""
 
 def my_topology(nb_node):
 
     nodes = list(range(nb_node))
     circuits = []
+    """
+    A circuit: [time_slice, node1, node2, port1, port2]
+    As each ToR has only one link, port1/port2 should be 0 (the first port).
+    """
+    ##########################################
+    # Modification starts from here: 
+    
+    circuits += OpticalTopo.round_robin(
+        nodes=nodes, # The nodes group to have round-robin topology
+        start_time_slice=0 # The starting time slice of the round-robin topology
+        )
 
-    # You are supposed to modify the following line
-    circuits += OpticalTopo.round_robin(nodes=nodes, start_time_slice=0)
+    # Modification ends here.
+    ##########################################
 
     return circuits
 
@@ -43,7 +50,9 @@ if __name__ == "__main__":
         use_webserver=True,
     )
 
-    # You are supposed to modify my_topology function
+    # No modifications needed here. 
+    # You are supposed to modify the implementation of my_topology function.
+
     circuits = my_topology(nb_node=nb_node)
     assert net.deploy_topo(circuits)
 

@@ -2,11 +2,10 @@
 
 Welcome to OpenOptics Tutorial!
 This first tutorial will help you get familiar with the basic workflow and dashboard.
-You’ll run a pre-written script to deploy a simple optical data center network in an emulation environment (Mininet).
+You’ll run a Python script to deploy a simple optical data center network (DCN) in an emulation environment (Mininet).
 
-If you are attending the SIGCOMM’25 OpenOptics tutorial, you can log in to your assigned virtual machine (VM) using the command below.
-If not, you can use any Linux machine to follow along.
-
+If you are attending SIGCOMM’25 OpenOptics tutorial, you can log in to your assigned virtual machine (VM) using the commands below.
+If not, please follow the installation instruction at ![Quick Start](quickstart) to set up your environment if you haven't.
 
 ---
 
@@ -20,19 +19,7 @@ ssh -L localhost:8001:localhost:8001 root@sigcomm-tutorial-X
 
 If you are using VS Code with Remote Development, you can also use this command to connect your editor to the VM.
 
-
-## Step 2: Pull Docker Image and Clone Repository
-
-Will be updated after the release.
-
-```bash
-#git clone https://github.com/mpi-ncs/openoptics.git
-git clone https://gitlab.mpi-klsb.mpg.de/ylei/openoptics-mininet.git # For MPI Internal Users
-mv openoptics-mininet openoptics
-sudo docker pull ymlei/openoptics:latest
-```
-
-## Step 3: Enter the OpenOptics Environment
+## Step 2: Enter the OpenOptics Environment
 
 ### Option A: With VS Code
 
@@ -42,27 +29,16 @@ sudo docker pull ymlei/openoptics:latest
 	•	Command+Shift+P (Mac)
 3.	Run **Dev Containers: Reopen in Container**.
 
-### Option B: With Bash
-```
-cd openoptics/
-sudo docker run --privileged -dit --network host \
-  --name openoptics \
-  -v "$PWD:/openoptics" \
-  ymlei/openoptics:latest /bin/bash
+### Option B: With Terminal
+Execute the following command after you log into your VM
 
+```
 sudo docker exec -it openoptics bash
 ```
 
-## Step 4: Run the Example
+You are all set! Let's get started!
 
-### 0. Initialize the Dashboard.
-
-```bash
-cd /openoptics/openoptics/dashboard
-bash init.sh
-```
-
-### 1. Execute the OpenOptics script.
+### 1. Execute the OpenOptics Python Script.
 
 ```bash
 cd /openoptics/tutorials
@@ -95,7 +71,7 @@ if __name__ == "__main__":
     net.start()
 ```
 
-This script creates a network with:
+This script creates an optical DCN with:
 
 * An 8-node optical network. 
 * A round-robin optical topology. 
@@ -105,7 +81,7 @@ This script creates a network with:
 ![Architecture](../../assets/arch.png)
 
 
-Under the hood, `BaseNetwork` creates a Mininet network with OCS, Top-of-Rack switches, and hosts.
+Under the hood, `BaseNetwork` creates a Mininet network with OCS, switches, and hosts (`h0`-`h7`).
 
 Each ToR switch is connected to a port of optical circuit switch (OCS),
 and each ToR switch is connected to a host, as we set `nb_host_per_tor = 1`.

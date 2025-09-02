@@ -1,27 +1,32 @@
 # Tutorial 5: Multi-Hop Routing with Time Flow Tables
 
-We always send packets from the source to the destination through the direct connection.
-Now we wil try something different: multi-hop routing.
+In the previous task, packets were always sent from the source to the destination through the next available direct connection.
+Now we till try something different, **multi-hop routing**, where packets are forwarded through intermediate nodes when a direct path is not immediately available.
 
-Consider an topology as in the following figure:
+Consider the following topology schedule:
 
 ![topo](../../assets/example_connect.png)
 
 Suppose `h0` wants to send a packet to `h3` at time slice 0.
-With direct routing you have implemented, the packet cannot be sent out until time slice 2 when there is a direct connection between `h0` and `h3`.
+With the direct routing you implemented earlier, the packet cannot be transmitted until time slice 2, when a direct connection between `h0` and `h3` exists.
 
-But with multi-hop routing, the packet can be sent to `h1` at time slice 0, and from `h1` to `h3` at time slice 1.
-
+But with multi-hop routing, the packet can be sent from `h0` to `h1` at time slice 0, and then forwarded from `h1` to `h3` at time slice 1.
+This allows earlier delivery by leveraging intermediate nodes.
 
 ## Your Tasks
 
-You will implement **multi-hop routing** in your optical DCN:
+You will implement **multi-hop routing** with time flow tables in your optical DCN:
 
-1. Add time flow table entries to enable routing between `h0` and `h1`.
-2. In the `ping` test, no packet loss should occur.
-3. Compare the ping RTT and compared it with direct routing. Is it expected? Why?
+1. Add time flow table entries to enable routing between `h0` and `h1` (You don't have to add time flow table entries for routing packets between any other node pairs but feel free to do so if you wish).
+2. Verify that in the `ping` test, no packet loss occurs.
+3. Compare the `ping` RTT with that of direct routing. Is the result what you expected? Why or why not?
 
-Run the script and test your solution in the CLI with `OpenOptics> h0 ping h1`:
+Run the script with:
 ```python
 python3 5-multi-hop-routing.py
+```
+
+Then, in the CLI, test your solution with
+```
+OpenOptics> h0 ping h1
 ```

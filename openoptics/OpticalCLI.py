@@ -162,12 +162,11 @@ class OpticalCLI(CLI):
         metric = self.device_manager.get_device_metric()
         for sw_name in sw_names:
             print(f"{sw_name}: {metric[sw_name]['drop_ctr']}")
-
     def my_applications (self, line):
         """This application creates cluster pinging. It divides the network into two clusters
         ping within clusters a lot and ping between clusters little."""
 
-        print("Application running... (~10s)")
+        print("Application running... (~5s)")
         packets_re = re.compile(
             r'(?P<transmitted>\d+) packets transmitted, (?P<received>\d+) received'
         )
@@ -191,15 +190,15 @@ class OpticalCLI(CLI):
             pass
             #print(f"Internal: {hosts[id]} ping {hosts[(id+1) % middle]}")
             #print(f"Internal: {hosts[id+middle]} ping {hosts[((id+1) % middle) + middle]}")
-            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.5 -c20 -W 1 {hosts[(id+1) % middle].IP()}")
-            popens[hosts[id+middle]] = hosts[id+middle].popen(f"ping -i 0.5 -c20 -W 1 {hosts[((id+1) % middle) + middle].IP()}")
+            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.1 -c50 -W 2 {hosts[(id+1) % middle].IP()}")
+            popens[hosts[id+middle]] = hosts[id+middle].popen(f"ping -i 0.1 -c50 -W 2 {hosts[((id+1) % middle) + middle].IP()}")
 
         # External traffic
         for id in range(middle):
             #print(f"External: {hosts[id]} ping {hosts[len(hosts)-1-id]}")
             #print(f"External: {hosts[id]} ping {hosts[(id+1) % middle + middle]}")
-            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.2 -c10 -W 1 {hosts[len(hosts)-1-id].IP()}")
-            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.2 -c10 -W 1 {hosts[(id+2) % middle + middle].IP()}")
+            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.2 -c25 -W 2 {hosts[len(hosts)-1-id].IP()}")
+            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.2 -c25 -W 2 {hosts[(id+2) % middle + middle].IP()}")
         
         failure_flag = False
         rtts = []
@@ -242,21 +241,21 @@ class OpticalCLI(CLI):
         avg_rtt = int(sum(rtts)/len(rtts))
         tail_rtt = int(np.percentile(rtts, 99))
         target_avg_rtt = int(tail_rtt * 0.5)
-        target_tail_rtt =  128 * 10 # 128ms time slice, 8 nodes
+        target_tail_rtt =  64 * 10 # 64ms time slice, 8 nodes
 
         if tail_rtt > target_tail_rtt: 
             print(f"\033[91mFailed!\033[0m Tail RTT is too high: {tail_rtt}ms. Reduce it under {target_tail_rtt}ms") # 6+7
             return
 
         if avg_rtt > target_avg_rtt:
-            print(f"\033[91mFailed!\033[0m Average RTT is too large: {avg_rtt}ms. \
-Reduce it under 50% tail RTT (Target based on the current topology: {target_avg_rtt}ms)")
+            print(f"\033[91mFailed!\033[0m Average RTT is too large: {avg_rtt}ms. Target: {target_avg_rtt}ms\
+Did you allocate more connections within groups than across groups?")
             return
         
         print(f"\033[92mPASS!\033[0m No packet loss. Tail RTT: {tail_rtt}ms is under the target {target_tail_rtt}ms. Average RTT: {avg_rtt}ms is under the target ({target_avg_rtt}ms).")
     
     def do_test_task8(self, line):
-        """To test Tutorial task8. Clustering application in direct routing."""
+        """To test Tutorial task8. Check packet loss and ping tail RTT between h0 and h5"""
 
         failure_flag, rtts = self.my_applications(line)
 
@@ -266,12 +265,33 @@ Reduce it under 50% tail RTT (Target based on the current topology: {target_avg_
         
         avg_rtt = int(sum(rtts)/len(rtts))
         tail_rtt = int(np.percentile(rtts, 99))
-        target_avg_rtt = int(tail_rtt * 0.5)
-
-        if avg_rtt > target_avg_rtt:
-            print(f"\033[91mFailed!\033[0m Average RTT is too large: {avg_rtt}ms. \
-Reduce it under 50% tail RTT (Target based on the current topology: {target_avg_rtt}ms)")
-            return
         
-        print(f"\033[92mPASS!\033[0m No packet loss. Tail RTT: {tail_rtt}ms. Average RTT: {avg_rtt}ms is under the target ({target_avg_rtt}ms).")
+        print(f"\033[92mPASS!\033[0m No packet loss. Tail RTT: {tail_rtt}ms. Average RTT: {avg_rtt}m.")
+        self.do_test_task8_bonus(line)
+    def do_test_task8_bonus(self, line):
+
+        print("Bonus running... (~2s)")
+        rtts = get_rtt_from_ping(self.mn.hosts[0], self.mn.hosts[5], interval=0.1, nb_pkt=20, timeout=2)
+        tail_rtt = int(np.percentile(rtts, 99))
+        print(f"Bonus: h0-h5's tail RTT: {tail_rtt}ms")
+
+def get_rtt_from_ping(node1, node2, interval=1, nb_pkt=10, timeout=1):
+    rtt_re = re.compile(
+        r"time=(\d+)\s+ms"
+    )
     
+    popens = {}
+    rtts = []
+
+    popens[node1] = node1.popen(f"ping -i {interval} -c{nb_pkt} -W {timeout} {node2.IP()}")
+
+    for host, line in pmonitor(popens):
+        #print(f"{host}: {line}")
+                
+        # Extract data
+        rtt_match = rtt_re.search(line)
+        if rtt_match:
+            rtt = int(rtt_match.group(1))
+            rtts.append(rtt)
+    
+    return rtts

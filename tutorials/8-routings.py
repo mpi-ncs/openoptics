@@ -9,15 +9,15 @@ from typing import Dict
 from openoptics import Toolbox, OpticalTopo, OpticalRouting
 from openoptics.TimeFlowTable import Path, Step
 
-"""
-Circuit:
-[time_slice, node1, node2, port1, port2]
-"""
 def my_topology(nb_node):
+    # Do NOT change this function
 
     nodes = list(range(nb_node))
     half = nb_node // 2
     circuits = []
+    """
+    A circuit: [time_slice, node1, node2, port1, port2]
+    """
 
     # Internal circuits
     circuits += OpticalTopo.round_robin(nodes=nodes[:half], start_time_slice=0)
@@ -33,16 +33,33 @@ def my_topology(nb_node):
 
 def my_routing(slice_to_topo: Dict[int, nx.Graph]):
     """
-    This is the implementation of direct routing.
+    This is the implementation of your routing.
     """
-    paths = []
-
     nodes = slice_to_topo[0].nodes()
+    paths = []
+    # path: Path(src, arrival_ts, dst, steps=[Step(send_port, send_ts)])
+
+    ##########################################
+    # Modification starts from here: 
+
     for node1 in nodes:
         for node2 in nodes:
             if node1 == node2:
                 continue
             paths.extend(OpticalRouting.find_direct_path(slice_to_topo, node1, node2))
+            """
+            If you prefer to add paths manually
+            paths.append(
+                Path(src=0, arrival_ts=0, dst=5, 
+                        steps=[
+                        Step(send_port=0, send_ts=3), # First send to node 4 at time slice 3
+                        Step(send_port=0, send_ts=1) # Send from node 4 to node 5 at time slice 2
+                        ])
+                    )
+            """
+
+    # Modification ends here.
+    ##########################################
 
     return paths
 
@@ -62,7 +79,8 @@ if __name__ == "__main__":
     circuits = my_topology(nb_node)
     assert net.deploy_topo(circuits)
 
-    #paths = OpticalRouting.routing_direct(net.get_topo())
+    # No modifications needed here. 
+    # You are supposed to modify the implementation of my_routing function.
     paths = my_routing(net.get_topo())
     assert net.deploy_routing(paths, routing_mode="Source")
 

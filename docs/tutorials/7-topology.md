@@ -1,15 +1,16 @@
-# Tutorial 7: Design Topology for Application
+# Tutorial 7: Design Topology for an Application
 
-In this section, you will design a network topology for a customized distributed application.
+In this tutorial, you will design a network topology tailored for a custom distributed application.
 
-The application is deployed on 8 hosts in an 8-ToR (Top-of-Rack switch) network (one host per ToR).
-Each host may send traffic to other hosts.
-The diagram below shows an example traffic pattern of the application.
+The application is deployed on 8 hosts in an 8-ToR (Top-of-Rack switch) network, with one host per ToR.
+Each host may send traffic to every other host.
+
+The diagram below illustrates the application's traffic pattern:
 
         Group A (Hosts 0–3)                    Group B (Hosts 4–7)
         ┌───────────────┐                       ┌───────────────┐
-        │   2× traffic  │                       │   2× traffic  │
-        │   within A    │                       │   within B    │
+        │ dense traffic │                       │ dense traffic │
+        │ within group  │                       │ within group  │
         └───────────────┘                       └───────────────┘
 
             h0 --- h1                              h4 --- h5
@@ -18,52 +19,53 @@ The diagram below shows an example traffic pattern of the application.
 
                    \                                  /
                     \                                /
-                     \________ 1× traffic __________/
-                            between groups
+                     \______ light traffic _________/
+                    between nodes in different groups
 
 	•	The applications are divided into two groups.
 
 	•	Group A = hosts 0–3; Group B = hosts 4–7.
 
-	•	Groups have heavier internal communication and lighter external communication.
+	•	Groups have denser intra-group communication and lighter inter-group communication.
 
-	•	Intra-group vs. inter-group traffic ratio: 2:1.
+	•	Traffic ratio (intra-group : inter-group) = 2:1. (You don’t need to fit the topology perfectly to this ratio.)
 
+By default, the script tutorials/7-topology.py creates a round-robin topology across all nodes (you will modify this topology in the this task):
+	•	Each node connects directly to one other node per time slice.
+	•	Across all time slices, each node has a direct connection to every other node.
 
-## Your Task
+```{tips}
+Run the script first and inspect the topology on the dashboard to understand the default round-robin schedule.  
+Then, modify the input arguments of `round_robin()` to check when topologies are generated.
+```
 
-We will stick to direct routing for this task. Your goal is to design a topology that:
+## Your Tasks
 
-	1.	Has no packet loss.
+We will use direct routing for this task. Your goal is to design a topology that:
 
-	2.	Reduces the average message RTT consistently under 50% tail RTT.
-
-	3.	Reduces the maximum message RTT within 10 time slices.
+1. Ensures **no packet loss**: the schedule must include direct connections between all node pairs.
+2. Allocates **more connections within groups** than across groups.
+3. **Bonus**: After completing the above, try to reduce the **maximum message RTT** to within 10 time slices, if you haven't.
 
 
 ### Notice:
 
-	•	Don't change the application.
+- Don't change the application.
+- Don't change the routing.
+- Don't change the slice duration.
+- Don't change the number of links per ToR
 
-	•	Don't change the routing.
 
-	•	Don't change the slice duration.
+```{tips}
+You can complete this task using only `OpticalTopo.round_robin()` inside the topology generator function `my_topology`.
+```
 
-	•	Don't change the number of links per ToR
-
-In the provided script, you have a balanced round-robin topology deployed.
-Please first check the topology it generated on the dashboard. You can implement `my_topology`
-by call
-`OpticalTopo.round_robin()` to build the topology you want.
-
-Round-robin implementation in `openoptics.OpticalTopo.round_robin`
-
-To run the application and test it in the OpenOptics CLI:
+To test your design in the OpenOptics CLI:
 
 ```bash
 OpenOptics-> test_task7
 ```
 
-You will see **PASS** if your topology meets the requirements.
+You will see **PASS** if your solution satisfies all requirements.
 
-You can also ping individual hosts to check connectivity and delay.
+You can also use `ping` between individual hosts to check connectivity and delay.

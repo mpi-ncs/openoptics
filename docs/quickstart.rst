@@ -1,6 +1,10 @@
 Quick Start
 ====================
 
+Requirements
+--------------
+OS: Linux
+
 Connect to Your Remote Machine
 --------------------------------------
 
@@ -11,38 +15,37 @@ If you're using a remote machine, set up port forwarding for viewing the OpenOpt
    ssh -L localhost:8001:localhost:8001 YOUR_MACHINE
 
 
-The easiest way to get started is to use OpenOptics Docker image.
+Pull Docker Image and Clone Repository
+-------------------------------------------
 
 .. code-block:: bash
 
-   sudo docker pull ymlei/openoptics:latest
-
-Then clone and enter the repository folder.
-
-.. code-block:: bash
-   
+   sudo docker pull ymlei/openoptics:latest   
    git clone https://github.com/mpi-ncs/openoptics.git
-   cd openoptics
 
-Enter the Container
--------------------
+Enter the OpenOptics Environment
+---------------------------------
 
-With VSCode devcontainer
+Option A: With VS Code
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Open openoptics folder with VSCode remote.
-With Docker and the VS Code Dev Containers extension installed, simply press Ctrl+Shift+P or Command+Shift+P (Mac) in your VS Code and run the "Dev Containers: Reopen in Container" command to open the repository inside the container. After that, Optics-Mininet is ready to go.
+1.	Open the folder `openoptics` with the VS Code Remote - Containers extension.
+2.	With Docker and the Dev Containers extension installed, press:
+	•	Ctrl+Shift+P (Windows/Linux)
+	•	Command+Shift+P (Mac)
+3.	Run **Dev Containers: Reopen in Container**.
 
-Or with bash
-^^^^^^^^^^^^
+Option B: With Terminal
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: bash
 
-   cd /openoptics
+   cd openoptics/
    sudo docker run --privileged -dit --network host \
-     --name openoptics \
-     -v "$PWD:/openoptics" \
-     ymlei/openoptics:latest /bin/bash
+   --name openoptics \
+   -v "$PWD:/openoptics" \
+   ymlei/openoptics:latest /bin/bash
+
    sudo docker exec -it openoptics bash
 
 Initialize the Dashboard
@@ -53,8 +56,9 @@ Initialize the Dashboard
    cd /openoptics/openoptics/dashboard
    bash init.sh
 
+You are all set!
 
-With Example Scripts
+Start with an Example Script
 --------------------
 
 Use the following commands to start a round-robin optical DCN with direct path routing:
