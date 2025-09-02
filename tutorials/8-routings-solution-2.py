@@ -34,36 +34,61 @@ def my_topology(nb_node):
 def my_routing(slice_to_topo: Dict[int, nx.Graph]):
     """
     This is the implementation of multi-hop routing.
+    For h0-5 only.
     """
     paths = []
 
     nodes = slice_to_topo[0].nodes()
-    for node1 in nodes:
-        for node2 in nodes:
-            if node1 == node2:
-                continue
-            if (node1 // 4 == node2 // 4) or (node1 % 4 == node2 % 4):
-                # Nodes within the same cluster, wait for the direct path.
-                #print(f"Find direct path for {node1} and {node2}")
-                paths.extend(OpticalRouting.find_direct_path(slice_to_topo, node1, node2))
-            else:
-                # Nodes are in different clusters and they don't have direct connections.
-                intermidiate_node = int((node1 + len(nodes)/2) % len(nodes))
-                # for 0 -> 5, intermidiate node = (0+4)%8 = 4
-                # for 2 -> 5, intermidiate node = (2+4)%8 = 6
-                # for 5 -> 2, intermidiate node = (5+4)%8 = 1
-                
-                paths_to_the_other_gorup = OpticalRouting.find_direct_path(slice_to_topo, node1, intermidiate_node)
-                paths_to_dst = OpticalRouting.find_direct_path(slice_to_topo, intermidiate_node, node2)
-
-                for path in paths_to_the_other_gorup:
-                    path.dst = node2
-                    for sec_hop in paths_to_dst:
-                        if sec_hop.arrival_ts == sec_hop.steps[0].send_ts:
-                            # this is the step we need
-                            path.steps.append(sec_hop.steps[0])
-                            paths.append(path)
-                            
+    
+    # paths for node 0
+    paths.extend([
+        Path(src=0, arrival_ts=0, dst=5, 
+                steps=[
+                Step(send_port=0, send_ts=2), # First send to node 1 at time slice 2
+                Step(send_port=0, send_ts=3) # Send from node 1 to node 5 at time slice 3
+                ]),
+        Path(src=0, arrival_ts=1, dst=5, 
+                steps=[
+                Step(send_port=0, send_ts=2), # First send to node 1 at time slice 2
+                Step(send_port=0, send_ts=3) # Send from node 1 to node 5 at time slice 3
+                ]),
+        Path(src=0, arrival_ts=2, dst=5, 
+                steps=[
+                Step(send_port=0, send_ts=2), # First send to node 1 at time slice 2
+                Step(send_port=0, send_ts=3) # Send from node 1 to node 5 at time slice 3
+                ]),
+        
+        Path(src=0, arrival_ts=3, dst=5, 
+                steps=[
+                Step(send_port=0, send_ts=3), # First send to node 4 at time slice 3
+                Step(send_port=0, send_ts=2) # Send from node 4 to node 5 at time slice 2
+                ])
+        ])
+    
+    # paths for node 5
+    paths.extend([
+        Path(src=5, arrival_ts=0, dst=0, 
+                steps=[
+                Step(send_port=0, send_ts=2), # First send to node 4 at time slice 2
+                Step(send_port=0, send_ts=3) # Send from node 4 to node 0 at time slice 3
+                ]),
+        Path(src=5, arrival_ts=1, dst=0, 
+                steps=[
+                Step(send_port=0, send_ts=2), # First send to node 4 at time slice 2
+                Step(send_port=0, send_ts=3) # Send from node 4 to node 0 at time slice 3
+                ]),
+        Path(src=5, arrival_ts=2, dst=0, 
+                steps=[
+                Step(send_port=0, send_ts=2), # First send to node 4 at time slice 2
+                Step(send_port=0, send_ts=3) # Send from node 4 to node 0 at time slice 3
+                ]),
+        
+        Path(src=5, arrival_ts=3, dst=0, 
+                steps=[
+                Step(send_port=0, send_ts=3), # First send to node 1 at time slice 3
+                Step(send_port=0, send_ts=2) # Send from node 1 to node 0 at time slice 2
+                ]),
+    ])
     #print(f"Paths: {paths}")
     return paths
 
