@@ -190,15 +190,15 @@ class OpticalCLI(CLI):
             pass
             #print(f"Internal: {hosts[id]} ping {hosts[(id+1) % middle]}")
             #print(f"Internal: {hosts[id+middle]} ping {hosts[((id+1) % middle) + middle]}")
-            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.1 -c50 -W 2 {hosts[(id+1) % middle].IP()}")
-            popens[hosts[id+middle]] = hosts[id+middle].popen(f"ping -i 0.1 -c50 -W 2 {hosts[((id+1) % middle) + middle].IP()}")
+            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.1 -c50 -W 5 {hosts[(id+1) % middle].IP()}")
+            popens[hosts[id+middle]] = hosts[id+middle].popen(f"ping -i 0.1 -c50 -W 5 {hosts[((id+1) % middle) + middle].IP()}")
 
         # External traffic
         for id in range(middle):
             #print(f"External: {hosts[id]} ping {hosts[len(hosts)-1-id]}")
             #print(f"External: {hosts[id]} ping {hosts[(id+1) % middle + middle]}")
-            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.2 -c25 -W 2 {hosts[len(hosts)-1-id].IP()}")
-            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.2 -c25 -W 2 {hosts[(id+2) % middle + middle].IP()}")
+            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.2 -c25 -W 5 {hosts[len(hosts)-1-id].IP()}")
+            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.2 -c25 -W 5 {hosts[(id+2) % middle + middle].IP()}")
         
         failure_flag = False
         rtts = []
