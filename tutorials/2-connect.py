@@ -5,12 +5,9 @@
 #   • In each time slice, each node connects to one other node (because each node only has one link).
 #   • Across all time slices, each node connects every other node once.
 # You can check the visualized topology via the dashboard on http://localhost:8001
+#
+# Detailed instructions: https://openoptics.mpi-inf.mpg.de/tutorials/2-connect.html
 ##########################################################################################
-
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openoptics import Toolbox
 

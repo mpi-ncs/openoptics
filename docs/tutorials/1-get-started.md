@@ -5,7 +5,11 @@ This first tutorial will help you get familiar with the basic workflow and dashb
 You’ll run a Python script to deploy a simple optical data center network (DCN) in an emulation environment (Mininet).
 
 If you are attending SIGCOMM’25 OpenOptics tutorial, you can log in to your assigned virtual machine (VM) using the commands below.
-If not, please follow the installation instruction at ![Quick Start](quickstart) to set up your environment if you haven't.
+If not, please follow the installation instruction at [Quick Start](../quickstart) to set up your environment if you haven't.
+
+```{admonition} Acknowledgments
+Many thanks to [measurement.network](https://measurement.network/) for providing the VMs for this SIGCOMM'25 Tutorial, and to the team ([Tobias Fiebig](https://www.mpi-inf.mpg.de/departments/inet/people/tobias-fiebig)) for managing this wonderful project.
+```
 
 ---
 
@@ -14,7 +18,7 @@ If not, please follow the installation instruction at ![Quick Start](quickstart)
 First, log into your VM. The `-L` flag forwards the port for the web dashboard, allowing you to access it from your local machine.
 
 ```bash
-ssh -L localhost:8001:localhost:8001 root@sigcomm-tutorial-X
+ssh -L localhost:8001:localhost:8001 USER_NAME@YOUR_HOST_NAME
 ```
 
 If you are using VS Code with Remote Development, you can also use this command to connect your editor to the VM.
@@ -23,11 +27,15 @@ If you are using VS Code with Remote Development, you can also use this command 
 
 ### Option A: With VS Code
 
-1.	Open the folder `openoptics` with the VS Code Remote - Containers extension.
-2.	With Docker and the Dev Containers extension installed, press:
-	•	Ctrl+Shift+P (Windows/Linux)
-	•	Command+Shift+P (Mac)
-3.	Run **Dev Containers: Reopen in Container**.
+1.	Make sure you have connected to the new remote with the above `ssh` command.
+2.	With Dev Containers extension installed, press:
+- Ctrl+Shift+P (Windows/Linux)
+- Command+Shift+P (Mac)
+3.	Run **Dev Containers: Attach to Running Container** and pick /openoptics.
+
+```{note}
+Do NOT select **Dev Containers: Reopen in Container**.
+```
 
 ### Option B: With Terminal
 Execute the following command after you log into your VM

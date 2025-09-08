@@ -7,6 +7,8 @@ As in the following figure:
 ![Architecture](../../assets/arch.png)
 
 With OpenOptics, you can define a **topology schedule** that specifies how electrical nodes (e.g., ToRs in the figure) connect to each other over time.
+This schedule will be executed repeatedly, one after another.
+
 The primitive API is:
 
 ```python

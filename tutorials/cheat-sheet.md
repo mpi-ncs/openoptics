@@ -12,7 +12,7 @@ Command+D
 
 Open http://localhost:8001 on your browser
 
-### Why doesn't it work?
+### Why doesn't the dashboard work?
 Check if you enable port forwarding:  
 ssh -L localhost:8001:localhost:8001 or  
 LocalForward localhost:8001 localhost:8001 in your host's .ssh/config  
@@ -23,3 +23,9 @@ LocalForward localhost:8001 localhost:8001 in your host's .ssh/config
 mn -c
 ```
 
+### ModuleNotFoundError: No module named 'openoptics'
+
+Under openoptic/
+```
+pip install -e .
+```

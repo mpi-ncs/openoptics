@@ -48,11 +48,14 @@ Option B: With Terminal
 
    sudo docker exec -it openoptics bash
 
-Initialize the Dashboard
+Install the Project and Initialize the Dashboard
 ------------------------
 
 .. code-block:: bash
 
+   cd /openoptics/
+   pip install -e .
+   
    cd /openoptics/openoptics/dashboard
    bash init.sh
 

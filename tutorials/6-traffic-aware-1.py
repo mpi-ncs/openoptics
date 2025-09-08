@@ -1,7 +1,6 @@
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+##########################################################################################
+# For detailed instructions: https://openoptics.mpi-inf.mpg.de/tutorials/6-traffic-aware.html
+##########################################################################################
 
 from openoptics import Toolbox, OpticalTopo, OpticalRouting
 

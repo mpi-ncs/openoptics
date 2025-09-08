@@ -1,17 +1,13 @@
 ##########################################################################################
 # Programming with low-level APIs can be tedious and error-prone.
-# This example demonstrates how to use OpenOptics' high-level APIs to
+# The following two tutorials demonstrate how to use OpenOptics' high-level APIs to
 # build optical data center networks (DCNs) with just a few lines of code.
 #
-# In this task, your challenge is to modify the round_robin topology functions
-# of use it to build your own topology function to reduce average RTT of a 
-# cutomized application.
+# In this task, your challenge is to use the round_robin topology functions
+# to build your own topology function for a cutomized application.
+#
+# Detailed instructions: https://openoptics.mpi-inf.mpg.de/tutorials/7-topology.html
 ##########################################################################################
-
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openoptics import Toolbox, OpticalTopo, OpticalRouting
 

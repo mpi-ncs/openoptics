@@ -22,7 +22,10 @@ For example, at ToR0, the following flow table entry:
 |     Dst: 1     ||   Send Port: 0  |
 -------------------------------------
 ```
-instructs the switch to forward packets destined for node 1 out of port 0.
+instructs the switch to forward packets destined for node 1 out of port 0,
+whenever the switch receives a packet.
+
+If this is the only flow table entry on the switch, any packet not destined for node 1 (no match) will be dropped.
 
 
 ## Define Flow Table Entries in OpenOptics
@@ -30,6 +33,7 @@ instructs the switch to forward packets destined for node 1 out of port 0.
 With OpenOptics, the above entry can be defined as:
 
 ```python
+# Without any time-related fields specified, it is just a normal flow table entry.
 TimeFlowEntry(dst=1, hops=TimeFlowHop(send_port=0))
 ```
 

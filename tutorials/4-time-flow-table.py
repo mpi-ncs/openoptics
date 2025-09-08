@@ -6,12 +6,9 @@
 # (3) Update flow table to time flow table -
 #     adjust send_ts and arrival_ts according to time sliced topology.
 # (4) Test reachability again with ping: `h0 ping h1`
+#
+# Detailed instructions: https://openoptics.mpi-inf.mpg.de/tutorials/4-time-flow-table.html
 ##########################################################################################
-
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openoptics import Toolbox
 from openoptics.TimeFlowTable import TimeFlowHop, TimeFlowEntry

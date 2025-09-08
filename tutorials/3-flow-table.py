@@ -5,12 +5,9 @@
 # 2. Test reachability with ping: `h0 ping h1`, check packets' sequence numbers `icmp_seq`, and reason the packet loss.
 # 3. To reduce packet loss, you could add flow table entries for nodes 2 and 3.
 # 4. Test reachability again with ping: `h0 ping h1`, and check icmp_seq now.
+#
+# Detailed instructions: https://openoptics.mpi-inf.mpg.de/tutorials/3-flow-table.html
 ##########################################################################################
-
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openoptics import Toolbox
 from openoptics.TimeFlowTable import TimeFlowHop, TimeFlowEntry

@@ -1,7 +1,10 @@
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+##########################################################################################
+# In this tutorial, you are given a topology that does NOT provide 
+# direct connections between every pair of nodes. Your goal is to 
+# design a routing on this topology to deliver all packets.
+#
+# Detailed instructions: https://openoptics.mpi-inf.mpg.de/tutorials/8-routing.html
+##########################################################################################
 
 import networkx as nx
 from typing import Dict
@@ -48,16 +51,18 @@ def my_routing(slice_to_topo: Dict[int, nx.Graph]):
                 continue
             paths.extend(OpticalRouting.find_direct_path(slice_to_topo, node1, node2))
             """
-            If you prefer to add paths manually
+            # If you prefer to add paths manually
             paths.append(
                 Path(src=0, arrival_ts=0, dst=5, 
                         steps=[
-                        Step(send_port=0, send_ts=3), # First send to node 4 at time slice 3
-                        Step(send_port=0, send_ts=1) # Send from node 4 to node 5 at time slice 2
+                        Step(cur_node=0, send_port=0, send_ts=3), # First send to node 4 at time slice 3
+                        Step(cur_node=4, send_port=0, send_ts=1) # Send from node 4 to node 5 at time slice 2
                         ])
                     )
+            # cur_node is for source routing to check whether the node the packet arrives is as expected,
+            # the apcket will be dropped if cur_node doesn't match the actual arrival node.
             """
-
+    print(paths)
     # Modification ends here.
     ##########################################
 

@@ -7,10 +7,10 @@ Consider the following topology schedule:
 
 ![topo](../../assets/example_connect.png)
 
-Suppose `h0` wants to send a packet to `h3` at time slice 0.
-With the direct routing you implemented earlier, the packet cannot be transmitted until time slice 2, when a direct connection between `h0` and `h3` exists.
+Suppose `h0` wants to send a packet to `h1` at time slice 1.
+With the direct routing you implemented earlier, the packet cannot be transmitted until time slice 0 of the next cycle, when a direct connection between `h0` and `h1` exists.
 
-But with multi-hop routing, the packet can be sent from `h0` to `h1` at time slice 0, and then forwarded from `h1` to `h3` at time slice 1.
+But with multi-hop routing, the packet can be sent from `h0` to `h2` at time slice 1, and then forwarded from `h2` to `h1` at time slice 2.
 This allows earlier delivery by leveraging intermediate nodes.
 
 ## Your Tasks

@@ -1,5 +1,9 @@
 # Tutorial 7: Design Topology for an Application
 
+Programming with low-level APIs can be tedious and error-prone.
+The following two tutorials demonstrate how to use OpenOptics' high-level APIs to
+build optical DCNs with just a few lines of code.
+
 In this tutorial, you will design a network topology tailored for a custom distributed application.
 
 The application is deployed on 8 hosts in an 8-ToR (Top-of-Rack switch) network, with one host per ToR.
@@ -34,7 +38,7 @@ By default, the script tutorials/7-topology.py creates a round-robin topology ac
 	•	Each node connects directly to one other node per time slice.
 	•	Across all time slices, each node has a direct connection to every other node.
 
-```{tips}
+```{note}
 Run the script first and inspect the topology on the dashboard to understand the default round-robin schedule.  
 Then, modify the input arguments of `round_robin()` to check when topologies are generated.
 ```
@@ -56,7 +60,7 @@ We will use direct routing for this task. Your goal is to design a topology that
 - Don't change the number of links per ToR
 
 
-```{tips}
+```{note}
 You can complete this task using only `OpticalTopo.round_robin()` inside the topology generator function `my_topology`.
 ```
 

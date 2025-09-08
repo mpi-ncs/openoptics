@@ -65,7 +65,12 @@ This leads to packet loss, since not all node pairs have direct connections.
 Design a routing scheme for the given topology that:
 
 1. Ensures no packet loss.
-2. **Bonus**: How much is your `ping`'s max RTT between `h0` and `h5`? Could you reduce it more? Share your tail `RTT` (reported by `OpenOptics-> test_task8`) with your peers.
+2. **Bonus**: How much is your `ping`'s max RTT between `h0` and `h5`? Could you reduce it more? Share your tail `RTT` (reported by `OpenOptics-> test_task8_bonus`) with your peers.
+
+
+```{note}
+For attendees of the SIGCOMM'25 Tutorial: You may notice some packet loss on the VMs. This is caused by limited computational resources. You will still pass tests with correct routing.
+```
 
 
 ### Notice:

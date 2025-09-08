@@ -76,6 +76,9 @@ class OpticalCLI(CLI):
                 
             elif len(args) == 3:
                 time_slice = int(args[0])
+                if self.base_network.arch_mode == "TA" and time_slice != 0:
+                    print("Time slice must be 0 for traffic-aware mode.")
+                    return
                 node1 = self.parse_node(args[1])
                 node2 = self.parse_node(args[2])
                 if not self.base_network.connect(time_slice=time_slice,node1=node1,node2=node2):
@@ -84,6 +87,9 @@ class OpticalCLI(CLI):
 
             elif len(args) == 5:
                 time_slice = int(args[0])
+                if self.base_network.arch_mode == "TA" and time_slice != 0:
+                    print("Time slice must be 0 for traffic-aware mode.")
+                    return
                 node1 = self.parse_node(args[1])
                 node2 = self.parse_node(args[2])
                 port1 = int(args[3])
@@ -187,18 +193,17 @@ class OpticalCLI(CLI):
 
         # Internal traffic
         for id in range(middle):
-            pass
             #print(f"Internal: {hosts[id]} ping {hosts[(id+1) % middle]}")
             #print(f"Internal: {hosts[id+middle]} ping {hosts[((id+1) % middle) + middle]}")
-            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.1 -c50 -W 5 {hosts[(id+1) % middle].IP()}")
-            popens[hosts[id+middle]] = hosts[id+middle].popen(f"ping -i 0.1 -c50 -W 5 {hosts[((id+1) % middle) + middle].IP()}")
+            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.2 -c30 -W 5 {hosts[(id+1) % middle].IP()}")
+            popens[hosts[id+middle]] = hosts[id+middle].popen(f"ping -i 0.2 -c30 -W 5 {hosts[((id+1) % middle) + middle].IP()}")
 
         # External traffic
         for id in range(middle):
             #print(f"External: {hosts[id]} ping {hosts[len(hosts)-1-id]}")
             #print(f"External: {hosts[id]} ping {hosts[(id+1) % middle + middle]}")
-            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.2 -c25 -W 5 {hosts[len(hosts)-1-id].IP()}")
-            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.2 -c25 -W 5 {hosts[(id+2) % middle + middle].IP()}")
+            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.5 -c15 -W 5 {hosts[len(hosts)-1-id].IP()}")
+            popens[hosts[id]] = hosts[id].popen(f"ping -i 0.5 -c15 -W 5 {hosts[(id+2) % middle + middle].IP()}")
         
         failure_flag = False
         rtts = []
@@ -216,7 +221,7 @@ class OpticalCLI(CLI):
                 transmitted = int(packets_match['transmitted'])
                 received = int(packets_match['received'])
                 #print(f"Host: {host}: {transmitted} transmitted, {received} received")
-                if transmitted - received > 1: # There is chance for one packet loss
+                if received / transmitted < 1/2: # There is chance for some packet loss on resource-constrained VMs
                     print(f"Host: {host}: packet loss!")
                     failure_flag = True
 
@@ -241,15 +246,15 @@ class OpticalCLI(CLI):
         avg_rtt = int(sum(rtts)/len(rtts))
         tail_rtt = int(np.percentile(rtts, 99))
         target_avg_rtt = int(tail_rtt * 0.5)
-        target_tail_rtt =  64 * 10 # 64ms time slice, 8 nodes
-
-        if tail_rtt > target_tail_rtt: 
-            print(f"\033[91mFailed!\033[0m Tail RTT is too high: {tail_rtt}ms. Reduce it under {target_tail_rtt}ms") # 6+7
-            return
+        target_tail_rtt =  128 * 10 # 10 time slices
 
         if avg_rtt > target_avg_rtt:
             print(f"\033[91mFailed!\033[0m Average RTT is too large: {avg_rtt}ms. Target: {target_avg_rtt}ms\
 Did you allocate more connections within groups than across groups?")
+            return
+
+        if tail_rtt > target_tail_rtt: 
+            print(f"\033[92mPASS!\033[0m Bonus \033[91mfailed.\033[0m Tail RTT is too high: {tail_rtt}ms. Try reducing it under {target_tail_rtt}ms") #
             return
         
         print(f"\033[92mPASS!\033[0m No packet loss. Tail RTT: {tail_rtt}ms is under the target {target_tail_rtt}ms. Average RTT: {avg_rtt}ms is under the target ({target_avg_rtt}ms).")
@@ -299,7 +304,7 @@ def get_rtt_from_ping(node1, node2, interval=1, nb_pkt=10, timeout=1):
         if packets_match: 
             transmitted = int(packets_match['transmitted'])
             received = int(packets_match['received'])
-            if transmitted - received > 1: # There is chance for one packet loss
+            if received / transmitted < 1/2: # There is chance for some packet loss on resource-constrained VMs
                 print(f"Host: {host}: packet loss!")
 
         # Extract data

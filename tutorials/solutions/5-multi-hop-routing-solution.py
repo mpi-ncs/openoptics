@@ -2,13 +2,8 @@
 # In this task, you will route packets through multi-hop paths, instead of
 # waiting for the direct connection to be established. Goals are:
 # (1) make ping work without packet loss
-# (2) route packets via multi-hop path to reduce waiting time.
+# (2) route packets via multi-hop paths to reduce waiting time.
 ##########################################################################################
-
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openoptics import Toolbox
 from openoptics.TimeFlowTable import TimeFlowHop, TimeFlowEntry
@@ -35,39 +30,43 @@ if __name__ == "__main__":
 
     node0_entries = [
         TimeFlowEntry(
-            dst=1, arrival_ts=0, hops=[TimeFlowHop(cur_node=0, send_ts=0, send_port=0)]
+            dst=1, arrival_ts=0, hops=[TimeFlowHop(send_ts=0, send_port=0)]
         ),
         TimeFlowEntry(
-            dst=1,
-            arrival_ts=1,
-            hops=[
-                TimeFlowHop(cur_node=0, send_ts=1, send_port=0),
-                TimeFlowHop(cur_node=2, send_ts=2, send_port=0),
-            ],
-        ),
+            dst=1, arrival_ts=1, hops=[TimeFlowHop(send_ts=1, send_port=0)]
+        ),  # Send to node2
         TimeFlowEntry(
-            dst=1, arrival_ts=2, hops=[TimeFlowHop(cur_node=0, send_ts=0, send_port=0)]
+            dst=1, arrival_ts=2, hops=[TimeFlowHop(send_ts=0, send_port=0)]
         ),
     ]
 
     node1_entries = [
         TimeFlowEntry(
-            dst=0, arrival_ts=0, hops=[TimeFlowHop(cur_node=1, send_ts=0, send_port=0)]
+            dst=0, arrival_ts=0, hops=[TimeFlowHop(send_ts=0, send_port=0)]
         ),
         TimeFlowEntry(
-            dst=0,
-            arrival_ts=1,
-            hops=[
-                TimeFlowHop(cur_node=1, send_ts=1, send_port=0),
-                TimeFlowHop(cur_node=3, send_ts=2, send_port=0),
-            ],
-        ),
+            dst=0, arrival_ts=1, hops=[TimeFlowHop(send_ts=1, send_port=0)]
+        ),  # Send to node3
         TimeFlowEntry(
-            dst=0, arrival_ts=2, hops=[TimeFlowHop(cur_node=1, send_ts=0, send_port=0)]
+            dst=0, arrival_ts=2, hops=[TimeFlowHop(send_ts=0, send_port=0)]
         ),
     ]
 
-    net.add_time_flow_entry(node_id=0, entries=node0_entries, routing_mode="Source")
-    net.add_time_flow_entry(node_id=1, entries=node1_entries, routing_mode="Source")
+    node2_entries = [
+        TimeFlowEntry(
+            dst=1, arrival_ts=1, hops=[TimeFlowHop(send_ts=2, send_port=0)]
+        )  # Forward for 0->1
+    ]
+
+    node3_entries = [
+        TimeFlowEntry(
+            dst=0, arrival_ts=1, hops=[TimeFlowHop(send_ts=2, send_port=0)]
+        )  # Forward for 1->0
+    ]
+
+    net.add_time_flow_entry(node_id=0, entries=node0_entries)
+    net.add_time_flow_entry(node_id=1, entries=node1_entries)
+    net.add_time_flow_entry(node_id=2, entries=node2_entries)
+    net.add_time_flow_entry(node_id=3, entries=node3_entries)
 
     net.start()

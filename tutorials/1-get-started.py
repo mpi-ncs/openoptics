@@ -5,13 +5,9 @@
 # (3) Test the network with ping to check reachability and delay.
 #     e.g. `h0 ping h1` # Equvilent to execute "ping h1" at h0
 # (4) Modify slice duration and observe change of ping delay and queue depth.
+#
+# Detailed instructions: https://openoptics.mpi-inf.mpg.de/tutorials/1-get-started.html
 ##########################################################################################
-
-
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openoptics import Toolbox, OpticalTopo, OpticalRouting
 

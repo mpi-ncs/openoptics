@@ -5,14 +5,12 @@
 # In this task, you will implement multi-hop routing in per-hop path mode.
 # In this mode, packets do not carry the full path. Instead, each node (ToR)
 # uses its own per-hop time flow table to determine how to forward packets.
+#
+# Detailed instructions: https://openoptics.mpi-inf.mpg.de/tutorials/5-multi-hop-routing.html
 ##########################################################################################
 
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 from openoptics import Toolbox
+from openoptics.TimeFlowTable import TimeFlowHop, TimeFlowEntry
 
 if __name__ == "__main__":
     net = Toolbox.BaseNetwork(
@@ -38,8 +36,8 @@ if __name__ == "__main__":
 
     net.add_time_flow_entry(node_id=0, entries=node0_entries)
     net.add_time_flow_entry(node_id=1, entries=node1_entries)
-    net.add_time_flow_entry(node_id=2, entries=node1_entries)
-    net.add_time_flow_entry(node_id=3, entries=node1_entries)
+    net.add_time_flow_entry(node_id=2, entries=node2_entries)
+    net.add_time_flow_entry(node_id=3, entries=node3_entries)
 
     # Modification ends here.
     ##########################################
