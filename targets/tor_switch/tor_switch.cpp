@@ -204,6 +204,7 @@ TorSwitch::TorSwitch(
   size_t tor_id,
   size_t nb_time_slices,
   size_t time_slice_duration_ms,
+  size_t guardband_ms,
   CalendarQueueMode calendar_queue_mode
 )
   : Switch(enable_swap),
@@ -214,6 +215,7 @@ TorSwitch::TorSwitch(
     tor_id(tor_id),
     nb_time_slices(nb_time_slices),
     time_slice_duration_ms(time_slice_duration_ms),
+    guardband_ms(guardband_ms),
     calendar_queue_mode(calendar_queue_mode),
     egress_buffers(nb_egress_threads,
                    64, EgressThreadMapper(nb_egress_threads),
@@ -234,7 +236,7 @@ TorSwitch::TorSwitch(
     nb_pkts_rcvd(0),
     nb_pkts_dropped(0) {
   
-  // Init active queue to a queue that won't be used.
+  // For TA: Init active queue to a queue that won't be used.
   egress_cq_buffers.set_active_queue(tor_id);
 
   add_component<McSimplePreLAG>(pre);
@@ -280,7 +282,11 @@ TorSwitch::receive_(port_t port_num, const char *buffer, int len) {
 
   size_t time_slice;
   if (calendar_queue_mode == CalendarQueueMode::TIME_BASED) {
-    time_slice = ts2time_slice(get_ts().count());
+    // Advance ingress time slice by guardband. It is equivalent to ending the current time slice earlier.
+    //BMLOG_DEBUG("guardband_ms={}. Original time slice={}", guardband_ms,ts2time_slice(get_ts().count()));
+    time_slice = ts2time_slice(get_ts().count() + guardband_ms*1000);
+    //time_slice = ts2time_slice(get_ts().count());
+    //BMLOG_DEBUG("Offset time slice with guardband={}", time_slice);
   } else {
     time_slice = 0; // TA
   }
@@ -800,7 +806,7 @@ TorSwitch::ingress_thread() {
 
 size_t 
 TorSwitch::ts2time_slice(int64_t ts_us) {
-  return ((ts_us >> 10) / time_slice_duration_ms) % nb_time_slices; // one slice per second
+  return ((ts_us / 1000 ) / time_slice_duration_ms) % nb_time_slices; // one slice per second
 }
 
 size_t

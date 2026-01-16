@@ -85,6 +85,7 @@ class TorSwitch : public Switch {
   static constexpr size_t default_nb_queues_per_port = 1;
   static constexpr size_t default_nb_time_slices = 1;
   static constexpr size_t default_time_slice_duration_ms = 0;
+  static constexpr size_t default_guardband_ms = 0;
   static constexpr CalendarQueueMode default_calendar_queue_mode = CalendarQueueMode::TIME_BASED;
 
  private:
@@ -98,6 +99,7 @@ class TorSwitch : public Switch {
                         size_t device_id = 0u,
                         size_t nb_time_slices = default_nb_time_slices,
                         size_t time_slice_duration_ms = default_time_slice_duration_ms,
+                        size_t guardband_ms = default_guardband_ms,
                         CalendarQueueMode calendar_queue_mode = TIME_BASED);
 
   ~TorSwitch();
@@ -222,6 +224,7 @@ class TorSwitch : public Switch {
   size_t tor_id;
   size_t nb_time_slices;
   size_t time_slice_duration_ms;
+  size_t guardband_ms;
   CalendarQueueMode calendar_queue_mode;
   bm::QueueingLogicPriRL<std::unique_ptr<Packet>, EgressThreadMapper> egress_buffers;
   CalendarQueue<std::unique_ptr<Packet> > egress_cq_buffers;

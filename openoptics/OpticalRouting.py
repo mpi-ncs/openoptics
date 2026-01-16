@@ -20,7 +20,7 @@ from openoptics.TimeFlowTable import Path, Step
 # Tool funcs
 
 
-def find_send_port(topo: nx.Graph, src, dst):
+def find_send_port(topo: nx.Graph, src, dst): # To-do: move to OpticalTopo
     """
     Helper function to find the send port given the src and dst nodes in the topo.
 
@@ -32,8 +32,9 @@ def find_send_port(topo: nx.Graph, src, dst):
     Returns:
         The send port of src
     """
+    if not topo.has_edge(src, dst):
+        return None
     return topo[src][dst].get("port1")
-
 
 def find_direct_path(
     slice_to_topo: Dict[int, nx.Graph], node1: int, node2: int
@@ -52,7 +53,7 @@ def find_direct_path(
     """
 
     if node1 == node2:
-        print("src and dst needs to be different.")
+        print("src and dst must be different.")
         return []
 
     paths = []
@@ -120,123 +121,173 @@ def find_n_hop_path_node_pair(slice_to_topo: Dict[int, nx.Graph], src, dst, max_
     logger.addHandler(handler)
     """
 
-    paths = []
+    all_feasible_paths = []
 
     nb_ts = len(slice_to_topo.keys())
-    dst_arrival_ts = nb_ts - 1
+    #dst_arrival_ts = nb_ts - 1 # To-do: find paths from different dst_arrival_ts
 
-    path_buffer = queue.Queue()
-    path_buffer.put(
-        Path(
-            src=None,
-            arrival_ts=dst_arrival_ts,
-            dst=dst,
-            steps=[Step(dst, send_ts=dst_arrival_ts)],
+    for dst_arrival_ts in range(nb_ts):
+
+        paths = []
+
+        path_buffer = queue.Queue()
+        path_buffer.put(
+            Path(
+                src=src,
+                arrival_ts=dst_arrival_ts,
+                dst=dst,
+                steps=[Step(dst, send_ts=dst_arrival_ts)],
+            )
         )
-    )
 
-    while not path_buffer.empty():
-        # print(f"Current queue {[ele for ele in list(path_buffer.queue)]}")
+        while not path_buffer.empty():
+            # print(f"Current queue {[ele for ele in list(path_buffer.queue)]}")
 
-        cur_path = path_buffer.get()
-        cur_node = cur_path.steps[0].cur_node
-        cur_search_ts = cur_path.arrival_ts
+            cur_path = path_buffer.get()
+            cur_node = cur_path.steps[0].cur_node
+            cur_search_ts = cur_path.arrival_ts
 
-        try:
-            shortest_path = nx.shortest_path(
-                slice_to_topo[cur_search_ts], source=src, target=cur_node
-            )
-            # print(f"Find shortest_path {shortest_path}")
-            cur_path.arrival_ts = cur_search_ts - 1
+            try:
+                shortest_path = nx.shortest_path(
+                    slice_to_topo[cur_search_ts], source=src, target=cur_node
+                )
+                #print(f"Find shortest_path {shortest_path}")
+                cur_path.arrival_ts = cur_search_ts - 1
 
-            if len(shortest_path) - 1 + len(cur_path.steps) - 1 <= max_hop:
-                # We have found a path
+                if len(shortest_path) - 1 + len(cur_path.steps) - 1 <= max_hop:
+                    # We have found a path
 
-                found_path = copy.deepcopy(cur_path)
-                found_path.src = src
-                found_path.arrival_ts = cur_search_ts
-                for cur_node, next_node in zip(shortest_path[:-1], shortest_path[1:]):
-                    found_path.steps.insert(
-                        0,
-                        Step(
-                            cur_node=cur_node,
-                            send_port=find_send_port(
-                                slice_to_topo[cur_search_ts], cur_node, next_node
+                    found_path = copy.deepcopy(cur_path)
+                    found_path.arrival_ts = cur_search_ts
+                    shortest_path.reverse() # dst, ..., src
+                    for next_node, cur_node in zip(shortest_path[:-1], shortest_path[1:]):
+                        found_path.steps.insert(
+                            0,
+                            Step(
+                                cur_node=cur_node,
+                                send_port=find_send_port(
+                                    slice_to_topo[cur_search_ts], cur_node, next_node
+                                ),
+                                send_ts=cur_search_ts,
+                                send_node=next_node,
                             ),
-                            send_ts=cur_search_ts,
-                            send_node=next_node,
-                        ),
-                    )
+                        )
 
-                # Remove the dst hop
-                found_path.steps = found_path.steps[:-1]
+                    # Remove the dst hop
+                    found_path.steps = found_path.steps[:-1]
 
-                # print(f"Find a path! {found_path}")
-                paths.append(found_path)
-            else:
-                logger.debug(f"The shortest path reach the max hop {max_hop}.")
-
-        except nx.NetworkXNoPath:
-            logger.debug(
-                f"No path found for slice{cur_search_ts} between node{src} and node{cur_node}!"
-            )
-
-        # Even if we find valid path, for searching all possible paths, we always ass wait path and search for neighbors
-        wait_path = copy.deepcopy(cur_path)
-        wait_path.arrival_ts = (cur_search_ts - 1 + nb_ts) % nb_ts
-        if wait_path.arrival_ts != dst_arrival_ts:
-            # print(f"Add wait path {wait_path}")
-            path_buffer.put(wait_path)
-        else:
-            logger.debug(
-                f"Try adding wait path. But have searched over one cycle. Drop path {cur_path}"
-            )
-
-        # We haven't found a valid path to src. Add neibours in the path.
-        cur_path.arrival_ts = (cur_search_ts - 1 + nb_ts) % nb_ts
-
-        # print(f"No path found at time slice {cur_search_ts}. Add neighbors to the intermidiate paths.")
-        if len(cur_path.steps) >= max_hop:
-            logger.debug(
-                f"Reach max hop {max_hop}. Cannot search neighbors. Drop path {cur_path}"
-            )
-        elif cur_path.arrival_ts == dst_arrival_ts:
-            logger.debug(f"Have searched over one cycle. Drop path {cur_path}")
-        else:
-            neighbors = slice_to_topo[cur_search_ts].neighbors(cur_node)
-            for neighbor in neighbors:
-                if neighbor not in [
-                    step.cur_node for step in cur_path.steps
-                ]:  # Skip visited nodes to avoid loop
-                    cur_path = copy.deepcopy(cur_path)
-                    cur_path.steps.insert(
-                        0,
-                        Step(
-                            cur_node=neighbor,
-                            send_port=find_send_port(
-                                slice_to_topo[cur_search_ts], neighbor, cur_node
-                            ),
-                            send_ts=cur_search_ts,
-                            send_node=cur_node,
-                        ),
-                    )
-                    # print(f"Add neighbor {neighbor}. New path: {cur_path}")
-                    path_buffer.put(cur_path)
+                    #print(f"Find a path! {found_path}")
+                    paths.append(found_path)
+                    continue # When we find a valid path, we don't need to continue search
                 else:
-                    logger.debug(
-                        f"Node {neighbor} has been visited in the path {cur_path}. Skip."
-                    )
+                    logger.debug(f"The shortest path reach the max hop {max_hop}.")
 
-    print(f"Paths: {paths}")
-    # paths we get have discrete arrival time slice, we need to generate paths for all time slice
-    extended_paths = extend_paths_to_all_time_slice(paths, nb_ts)
-    # print(f"Extended paths: {extended_paths}")
-    return extended_paths
+            except nx.NetworkXNoPath:
+                logger.debug(
+                    f"No path found for slice{cur_search_ts} between node{src} and node{cur_node}!"
+                )
+
+            # The packet hop-off on this node and wait for one time slice.
+            hop_off_path = copy.deepcopy(cur_path)
+            hop_off_path.arrival_ts = (cur_search_ts - 1 + nb_ts) % nb_ts
+            if hop_off_path.arrival_ts != dst_arrival_ts:
+                # print(f"Add wait path {cross_slice_path}")
+                path_buffer.put(hop_off_path)
+            else:
+                logger.debug(
+                    f"Try adding wait path. But have searched over one cycle. Drop path {cur_path}"
+                )
+
+            # We haven't found a valid path to src. Add neibours in the path.
+            cur_path.arrival_ts = (cur_search_ts - 1 + nb_ts) % nb_ts
+
+            # print(f"No path found at time slice {cur_search_ts}. Add neighbors to the intermidiate paths.")
+            if len(cur_path.steps) >= max_hop:
+                logger.debug(
+                    f"Reach max hop {max_hop}. Cannot search neighbors. Drop path {cur_path}"
+                )
+            elif cur_path.arrival_ts == dst_arrival_ts:
+                logger.debug(f"Have searched over one cycle. Drop path {cur_path}")
+            else:
+                neighbors = slice_to_topo[cur_search_ts].neighbors(cur_node)
+                for neighbor in neighbors:
+                    if neighbor != dst or neighbor not in [
+                        step.cur_node for step in cur_path.steps
+                    ]:  # Skip visited nodes to avoid loop
+                        candidate_path = copy.deepcopy(cur_path)
+                        candidate_path.steps.insert(
+                            0,
+                            Step(
+                                cur_node=neighbor,
+                                send_port=find_send_port(
+                                    slice_to_topo[cur_search_ts], neighbor, cur_node
+                                ),
+                                send_ts=cur_search_ts,
+                                send_node=cur_node,
+                            ),
+                        )
+                        # print(f"Add neighbor {neighbor}. New path: {candidate_path}")
+                        path_buffer.put(candidate_path)
+                    else:
+                        logger.debug(
+                            f"Node {neighbor} has been visited in the path {cur_path}Skip."
+                        )
+        if len(paths) == 0:
+            raise Exception(f"No path found between node{src} and node{dst}")
+    
+        paths = list(dict.fromkeys(paths))
+        #print(f"Paths from {src} to {dst}: {paths}")
+        # paths we get have discrete arrival time slice, we need to generate paths for all time slice
+        all_feasible_paths.extend(paths) # Remove multi-path
+
+    #print(f"All feasible paths: {all_feasible_paths}")
+    optimal_paths = remove_suboptimal_paths(all_feasible_paths, nb_ts)
+    #print(f"{optimal_paths=}")
+    paths_for_all_arrival_time_slices = extend_paths_to_all_time_slice(optimal_paths, nb_ts)
+    #print(f"Paths for all available time slices: {paths_for_all_arrival_time_slices}")
+    return paths_for_all_arrival_time_slices
+
+def remove_suboptimal_paths(paths: List[Path], nb_ts: int):
+    """
+    Remove suboptimal paths for given a feasiable paths from a src to a dst.
+    First, for each arrival_ts, keep only the Path whose last step has the earliest send_ts.
+    Second, removed path A if A's arrival ts < B's arrival ts, and A's last send ts < B's send ts. 
+
+    Args:
+        paths: A list of paths with the same src and dst
+        nb_ts: Number of total time slices
+
+    Returns:
+        A list of paths with suboptimal paths removed
+    """
+
+    assert [path.src == paths[0].src for path in paths], "Src node of all paths must be the same"
+    assert [path.dst == paths[0].dst for path in paths], "Dst node of all paths must be the same"
+
+
+    earliest_paths: Dict[int, Path] = {}
+    for path in paths:
+        if path.arrival_ts not in earliest_paths.keys():
+            earliest_paths[path.arrival_ts] = path
+        else:
+            start_ts = path.arrival_ts
+            old_ts = earliest_paths[path.arrival_ts].steps[-1].send_ts
+            old_path_duration = (old_ts + nb_ts - start_ts) % nb_ts
+            new_ts = path.steps[-1].send_ts
+            new_path_duration = (new_ts + nb_ts - start_ts) % nb_ts
+            if old_path_duration > new_path_duration:
+                earliest_paths[path.arrival_ts] = path
+            elif old_path_duration == new_path_duration:
+                # If path duration is the same, choose the path with less hops
+                if len(earliest_paths[path.arrival_ts].steps) > len(path.steps):
+                    earliest_paths[path.arrival_ts] = path
+    
+    return list(earliest_paths.values())
 
 
 def extend_paths_to_all_time_slice(paths: List[Path], nb_ts: int):
     """
-    Helper function used by opera and hoho routing. These routing does not provide
+    Helper function used by opera and hoho routing. These routings do not provide
     paths for all arrival time slices. This function fills the missing ones by
     letting packets wait for the nearest available path.
 
@@ -315,7 +366,6 @@ def routing_hoho(slice_to_topo: Dict[int, nx.Graph], max_hop) -> list:
         A list of paths for hoho routing
     """
     logger = logging.getLogger(__name__)
-    logger.debug("HOHO routing is not yet implemented")
 
     paths = []
     nodes = slice_to_topo[0].nodes()
@@ -329,8 +379,61 @@ def routing_hoho(slice_to_topo: Dict[int, nx.Graph], max_hop) -> list:
 
     return paths
 
+def routing_vlb(slice_to_topo: Dict[int, nx.Graph], tor_to_ocs_port: List[int]) -> List[Path]:
+    """
+    VLB routing.
 
-def routing_vlb(slice_to_topo: Dict[int, nx.Graph], tor_to_ocs_port) -> List[Path]:
+    Args:
+        slice_to_topo: Topology for each time slice
+        tor_to_ocs_port: Port mapping from ToR to OCS
+
+    Returns:
+        A list of paths for VLB routing
+    """
+    paths = []
+    nodes = slice_to_topo[0].nodes()
+    slices = slice_to_topo.keys()
+
+    for node1 in nodes:
+        for node2 in nodes:
+            if node1 == node2:
+                continue
+            for ts in slices:
+                send_port = find_send_port(slice_to_topo[ts], node1, node2)
+                if send_port is not None: # There is direct connection at this time slice.
+                    path = Path(
+                        src=node1,
+                        arrival_ts=ts,
+                        dst=node2,
+                        steps=[
+                            Step(cur_node=node1,
+                                 step_type="port",
+                                 send_port=send_port,
+                                 send_ts=ts,
+                            ),
+                        ]
+                    )
+                else: #There is no direct connection at this time slice. Send to a random node.
+                    path = Path(
+                        src=node1,
+                        arrival_ts=ts,
+                        dst=node2,
+                        steps=[
+                            Step(
+                                cur_node=node1,
+                                step_type="port",
+                                send_port=tor_to_ocs_port[ts%len(tor_to_ocs_port)], # Send through a "random" port
+                                send_ts=ts,
+                            ),
+                            Step(cur_node=255, step_type="node", send_node=node2),
+                        ],
+                    )
+                paths.append(path)
+
+    return paths
+
+
+def routing_vlb_all_random(slice_to_topo: Dict[int, nx.Graph], tor_to_ocs_port) -> List[Path]:
     """
     VLB routing.
 

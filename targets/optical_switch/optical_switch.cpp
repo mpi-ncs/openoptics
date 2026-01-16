@@ -482,7 +482,7 @@ OpticalSwitch::multicast(Packet *packet, unsigned int mgid) {
 
 size_t 
 OpticalSwitch::ts2time_slice(int64_t ts_us) {
-  return ((ts_us >> 10) / time_slice_duration_ms) % nb_time_slices; // one slice per second
+  return ((ts_us / 1000) / time_slice_duration_ms) % nb_time_slices; // one slice per second
 }
 
 void

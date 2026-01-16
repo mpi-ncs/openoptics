@@ -18,7 +18,7 @@ from openoptics.TimeFlowTable import Path, TimeFlowEntry
 
 from mininet.net import Mininet
 from mininet.topo import Topo
-from mininet.link import Link
+from mininet.link import Link, TCLink
 from .p4_mininet import P4Switch, P4Host
 
 from typing import List, Union
@@ -44,6 +44,8 @@ class BaseNetwork:
         nb_host_per_tor=1,
         backend="Mininet",
         time_slice_duration_ms=128,
+        guardband_ms=25,
+        link_delay_ms=0, # Mininet-specific parameter.
         arch_mode="TO",  # TO for traffic-oblivious, TA for traffic-aware
         use_webserver=True,
     ):
@@ -63,14 +65,16 @@ class BaseNetwork:
 
         self.thrift_port = 9090  # default thrift port
         self.host_tor_port = 0
-        self.tor_host_port = 10  # One host per ToR for now
         assert nb_link > 0
+        self.tor_host_port = nb_link
         self.tor_ocs_ports = list(range(nb_link))
 
         self.name = name
         self.backend = backend
         self.nb_time_slices = 1
         self.time_slice_duration_ms = time_slice_duration_ms
+        self.guardband_ms = guardband_ms + link_delay_ms
+        self.link_delay_ms = link_delay_ms
         self.arch_mode = arch_mode
         self.calendar_queue_mode = 0 if arch_mode == "TO" else 1
 
@@ -211,17 +215,19 @@ class BaseNetwork:
                 if self.calendar_queue_mode == 0
                 else self.nb_node,
                 time_slice_duration_ms=self.time_slice_duration_ms,
+                guardband_ms=self.guardband_ms,
                 calendar_queue_mode=self.calendar_queue_mode,
                 cls=P4Switch,
             )
-            # OCS connect port 1 to tor1, port2 to tor2...
-            # ToR connect port 0 to the OCS
+            # ToR connect tor_ocs_ports to the OCS
             for link_id in range(self.nb_link):
+                #print(f"Connect {ocs} port {self.cal_node_port_to_ocs_port(tor_id, link_id)} and {tor_switch} port {self.tor_ocs_ports[link_id]}")
                 self.mininet_topo.addLink(
                     node1=ocs,
                     node2=tor_switch,
                     port1=self.cal_node_port_to_ocs_port(tor_id, link_id),
                     port2=self.tor_ocs_ports[link_id],
+                    delay=f'{self.link_delay_ms}ms'
                 )
             self.thrift_port += 1
 
@@ -236,8 +242,6 @@ class BaseNetwork:
                     node2=tor_switch,
                     port1=self.host_tor_port,
                     port2=self.tor_host_port,
-                    # cls=TCLink,
-                    cls=Link,
                     bw=1000,
                     loss=0,
                 )
@@ -248,7 +252,8 @@ class BaseNetwork:
         #    print(link)
         print("Starting Mininet network...")
         self.mininet_net = Mininet(
-            self.mininet_topo, host=P4Host, switch=P4Switch, controller=None
+            self.mininet_topo, host=P4Host, switch=P4Switch, controller=None,
+            link=TCLink
         )
         self.mininet_net.staticArp()
 
@@ -331,7 +336,6 @@ class BaseNetwork:
                 print_flag=False,
                 save_flag=False,
             )
-
     def start(self):
         """
         Start OpenOptics user interface (CLI, dashboard, ...).

@@ -106,7 +106,7 @@ def round_robin(nb_node=None, nodes=None, port1=0, port2=0,
     return circuits
 
 
-def opera(nb_node, nb_link, nodes=None):
+def opera(nb_node, nb_link, nodes=None, disable_last_ts=False):
     """
     Opera topology support multiple upper links per node.
     In (nb_node / nb_link) time slices, each link of every node connects (nb_node / nb_link) number of nodes
@@ -144,7 +144,7 @@ def opera(nb_node, nb_link, nodes=None):
     # slice0: 0(p0) <-> 3(p0), 0(p1) <-> 2(p1), 1(p0) <-> 2(p0), 1(p1) <-> 3(p1)
     # slice1: 0(p0) <-> 1(p0), 0&1 (p1)   loop, 2(p0) <-> 3(p0), 2&3 (p1)   loop
 
-    offset_circuits = port_offset(merged_circuit)
+    offset_circuits = port_offset(merged_circuit, disable_last_ts)
     # offset_circuits = merged_circuit
 
     return offset_circuits
@@ -267,7 +267,7 @@ def topo_randomize_ts(circuits: list):
     return shuffled_circuits
 
 
-def port_offset(circuits: list):
+def port_offset(circuits: list, disable_last_ts=False):
     """
     Helper function to transform the circuits to reconfigure topology one port per time slice.
     New nb_time_slice = old nb_time_slice * nb_links
@@ -288,6 +288,8 @@ def port_offset(circuits: list):
         )
         new_ts_start = ts * nb_links + port1
         new_ts_end = (ts + 1) * nb_links + port1
+        if disable_last_ts:
+            new_ts_end -= 1
         for new_ts in range(new_ts_start, new_ts_end):
             offset_circuits.append(
                 [new_ts % (nb_time_slice * nb_links), node1, node2, port1, port2]

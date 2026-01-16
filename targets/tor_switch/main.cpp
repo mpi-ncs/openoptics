@@ -59,6 +59,9 @@ main(int argc, char* argv[]) {
       "time-slice-duration-ms",
       "Time slice duration in ms (default is 0)");
   tor_switch_parser.add_uint_option(
+      "guardband-ms",
+      "Guardband in ms (default is 0)");
+  tor_switch_parser.add_uint_option(
       "calendar-queue-mode",
       "Calendar queue mode (default is TIME_BASED)");
 
@@ -116,6 +119,16 @@ main(int argc, char* argv[]) {
       std::exit(1);
   }
 
+  uint32_t guardband_ms = 0xffffffff;
+  {
+    auto rc = tor_switch_parser.get_uint_option(
+        "guardband-ms", &guardband_ms);
+    if (rc == bm::TargetParserBasic::ReturnCode::OPTION_NOT_PROVIDED)
+      guardband_ms = TorSwitch::default_guardband_ms;
+    else if (rc != bm::TargetParserBasic::ReturnCode::SUCCESS)
+      std::exit(1);
+  }
+
   TorSwitch::CalendarQueueMode calendar_queue_mode;
   {
     uint32_t mode_int;
@@ -144,6 +157,7 @@ main(int argc, char* argv[]) {
     tor_id,
     nb_time_slices,
     time_slice_duration_ms,
+    guardband_ms,
     calendar_queue_mode
   );
 

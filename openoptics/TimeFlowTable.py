@@ -178,6 +178,14 @@ class Step:
         Returns:
             str: Formatted string with step information
         """
+
+        if self.step_type == "port": # send to a specific port
+            action = f"at {self.send_ts} time slice via port {self.send_port}\n"
+        elif self.step_type == "node": # send to a port at a specific node
+            action = f"to node {self.send_node}\n"
+        else:
+            raise ValueError(f"Invalid time flow step type {self.step_type}")
+    
         action = f"at {self.send_ts} time slice via port {self.send_port} to next node {self.send_node}\n"
         return (
             f"Current node {self.cur_node if self.cur_node != 255 else '*'}, forwarded by {self.step_type}: "
@@ -242,3 +250,22 @@ class Path:
             str: String representation of the object
         """
         return self.__str__()
+
+    def _key(self):
+        """
+        Compare src, arrival_ts, dst when comparing paths
+        """
+        return (self.src, self.dst, self.arrival_ts)
+
+    def __eq__(self, other):
+        if not isinstance(other, Path):
+            return NotImplemented
+        return self._key() == other._key()
+    
+    def __hash__(self):
+        return hash(self._key())
+    
+    def __lt__(self, other):
+        if not isinstance(other, Path):
+            return NotImplemented
+        return self._key() < other._key()

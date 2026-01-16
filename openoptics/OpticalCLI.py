@@ -31,6 +31,8 @@ class OpticalCLI(CLI):
         self.base_network = base_network
         self.mn = base_network.mininet_net
         self.device_manager = base_network.device_manager
+        self.slice_duration_ms = self.base_network.time_slice_duration_ms
+        self.nb_time_slices = self.base_network.nb_time_slices
         CLI.__init__(self, self.mn, stdin, script, **kwargs)
 
     def get_switches_from_line(self, line):
@@ -283,14 +285,31 @@ Did you allocate more connections within groups than across groups?")
         tail_rtt = int(np.percentile(rtts, 99))
         print(f"Bonus: h0-h5's tail RTT: {tail_rtt}ms")
 
+    def do_get_rtt_cdf(self, line):
+        nb_node = len(self.mn.hosts)
+        rtts = []
+        #rtts.extend(get_rtt_from_ping(self.mn.hosts[0], self.mn.hosts[1], interval=0.1, nb_pkt=30, timeout=5))
+        #"""
+        for node1 in range(nb_node):
+            for node2 in range(nb_node): 
+                if node1 == node2:
+                    continue     
+                rtts.extend(
+                    get_rtt_from_ping(
+                        self.mn.hosts[node1], self.mn.hosts[node2], 
+                        interval=self.slice_duration_ms / 1100, 
+                        nb_pkt=self.nb_time_slices * 1, timeout=10))
+        #"""
+        np.savetxt(self.base_network.name+".txt", rtts, fmt="%d")
+
 def get_rtt_from_ping(node1, node2, interval=1, nb_pkt=10, timeout=1):
     rtt_re = re.compile(
-        r"time=(\d+)\s+ms"
+        r"time=(\d+(?:\.\d+)?)\s+ms"
     )
 
     packets_re = re.compile(
             r'(?P<transmitted>\d+) packets transmitted, (?P<received>\d+) received'
-        )
+    )
     
     popens = {}
     rtts = []
@@ -310,7 +329,7 @@ def get_rtt_from_ping(node1, node2, interval=1, nb_pkt=10, timeout=1):
         # Extract data
         rtt_match = rtt_re.search(line)
         if rtt_match:
-            rtt = int(rtt_match.group(1))
+            rtt = int(float(rtt_match.group(1)))
             rtts.append(rtt)
     
     return rtts

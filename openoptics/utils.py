@@ -101,6 +101,11 @@ def load_table(
         with open(f"{save_name}.txt", "w") as file:
             file.write(table_commands)
 
+    # Remove the last "return" in commands, otherwise the last command will be executed again, likely leading to duplicated entry.
+    if table_commands[-1] == '\n':
+        table_commands = table_commands[:-1]
+
+    #print(table_commands)
     rst = switch.cmd(
         f'echo "{table_commands}" | {cli_path} --thrift-port {switch.thrift_port}'
     )
@@ -108,10 +113,13 @@ def load_table(
     if (rst is not None) and (print_flag == True):
         print(rst)
 
+    if "Error:" in rst:
+        assert False, f"Error for {switch.name}!\n{rst}\n{table_commands}"
+
     if "DUPLICATE_ENTRY" in rst:
-        pass
+        #pass
         # print(rst)
-        # assert False, "DUPLICATE_ENTRY!"
+        assert False, f"DUPLICATE_ENTRY for {switch.name}!\n{rst}\n{table_commands}"
 
     return True
 

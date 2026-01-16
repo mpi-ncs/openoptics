@@ -71,6 +71,7 @@ class P4Switch(Switch):
         enable_debugger=True,
         tor_id=0,
         time_slice_duration_ms=0,
+        guardband_ms=0,
         nb_time_slices=None,
         calendar_queue_mode=0,  # 0 is TIME_BASED, 1 is CONTROL_BASED
         **kwargs,
@@ -95,6 +96,7 @@ class P4Switch(Switch):
         self.log_console = log_console
         self.tor_id = tor_id
         self.time_slice_duration_ms = time_slice_duration_ms
+        self.guardband_ms = guardband_ms
         assert nb_time_slices is not None
         self.nb_time_slices = nb_time_slices
         self.calendar_queue_mode = calendar_queue_mode
@@ -154,12 +156,13 @@ class P4Switch(Switch):
             args.extend(["-- --nb-time-slices", str(self.nb_time_slices)])
             args.extend(["--time-slice-duration-ms", str(self.time_slice_duration_ms)])
         if self.name.startswith("tor"):
+            args.extend(["--guardband-ms", str(self.guardband_ms)])
             args.extend(["--calendar-queue-mode", str(self.calendar_queue_mode)])
             args.extend(["--tor-id", str(self.tor_id)])
 
         logfile = "/tmp/p4s.{}.log".format(self.name)
         info(" ".join(args) + "\n")
-        # print(' '.join(args) + "\n")
+        #print(' '.join(args) + "\n")
 
         pid = None
         with tempfile.NamedTemporaryFile() as f:

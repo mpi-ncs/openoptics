@@ -333,7 +333,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "tor.p4",
-        "line" : 449,
+        "line" : 496,
         "column" : 8,
         "source_fragment" : "MyDeparser"
       },
@@ -348,7 +348,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "tor.p4",
-        "line" : 413,
+        "line" : 460,
         "column" : 48,
         "source_fragment" : "port_counter"
       },
@@ -363,7 +363,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "tor.p4",
-        "line" : 426,
+        "line" : 473,
         "column" : 4,
         "source_fragment" : "update_checksum( ..."
       },
@@ -463,7 +463,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 161,
+            "line" : 173,
             "column" : 8,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           }
@@ -485,7 +485,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 161,
+            "line" : 173,
             "column" : 8,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           }
@@ -534,7 +534,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 166,
+            "line" : 178,
             "column" : 8,
             "source_fragment" : "arrival_time_slice = (ts_t)standard_metadata.ingress_global_timestamp"
           }
@@ -565,7 +565,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 170,
+            "line" : 182,
             "column" : 8,
             "source_fragment" : "hdr.oo_preamble.dst_node = dst_tor_in"
           }
@@ -600,7 +600,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 189,
+            "line" : 201,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.setValid()"
           }
@@ -619,7 +619,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 190,
+            "line" : 202,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.cur_node = cur_node"
           }
@@ -638,7 +638,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 191,
+            "line" : 203,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.send_time_slice = send_time_slice"
           }
@@ -657,7 +657,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 192,
+            "line" : 204,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.send_port_or_node = send_port_or_node"
           }
@@ -704,7 +704,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 204,
+            "line" : 216,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.setValid()"
           }
@@ -723,7 +723,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 205,
+            "line" : 217,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.cur_node = cur_node"
           }
@@ -742,7 +742,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 206,
+            "line" : 218,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.send_time_slice = send_time_slice"
           }
@@ -761,7 +761,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 207,
+            "line" : 219,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.send_port_or_node = send_port_or_node"
           }
@@ -776,7 +776,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 209,
+            "line" : 221,
             "column" : 8,
             "source_fragment" : "hdr.ssrr_1_hop.setValid()"
           }
@@ -795,7 +795,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 210,
+            "line" : 222,
             "column" : 8,
             "source_fragment" : "hdr.ssrr_1_hop.cur_node = cur_node_1"
           }
@@ -814,7 +814,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 211,
+            "line" : 223,
             "column" : 8,
             "source_fragment" : "hdr.ssrr_1_hop.send_time_slice = send_time_slice_1"
           }
@@ -833,7 +833,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 212,
+            "line" : 224,
             "column" : 8,
             "source_fragment" : "hdr.ssrr_1_hop.send_port_or_node = send_port_or_node_1"
           }
@@ -892,7 +892,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 227,
+            "line" : 239,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.setValid()"
           }
@@ -911,7 +911,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 228,
+            "line" : 240,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.cur_node = cur_node"
           }
@@ -930,7 +930,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 229,
+            "line" : 241,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.send_time_slice = send_time_slice"
           }
@@ -949,7 +949,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 230,
+            "line" : 242,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.send_port_or_node = send_port_or_node"
           }
@@ -964,7 +964,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 232,
+            "line" : 244,
             "column" : 8,
             "source_fragment" : "hdr.ssrr_2_hop.setValid()"
           }
@@ -983,7 +983,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 233,
+            "line" : 245,
             "column" : 8,
             "source_fragment" : "hdr.ssrr_2_hop.cur_node = cur_node_1"
           }
@@ -1002,7 +1002,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 234,
+            "line" : 246,
             "column" : 8,
             "source_fragment" : "hdr.ssrr_2_hop.send_time_slice = send_time_slice_1"
           }
@@ -1021,7 +1021,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 235,
+            "line" : 247,
             "column" : 8,
             "source_fragment" : "hdr.ssrr_2_hop.send_port_or_node = send_port_or_node_1"
           }
@@ -1040,7 +1040,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 237,
+            "line" : 249,
             "column" : 8,
             "source_fragment" : "hdr.ssrr_2_hop.cur_node_2 = cur_node_2"
           }
@@ -1059,7 +1059,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 238,
+            "line" : 250,
             "column" : 8,
             "source_fragment" : "hdr.ssrr_2_hop.send_time_slice_2 = send_time_slice_2"
           }
@@ -1078,7 +1078,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 239,
+            "line" : 251,
             "column" : 8,
             "source_fragment" : "hdr.ssrr_2_hop.send_port_or_node_2 = send_port_or_node_2"
           }
@@ -1086,8 +1086,322 @@
       ]
     },
     {
-      "name" : "MyIngress.write_time_flow_entry",
+      "name" : "MyIngress.write_ssrr_header_3",
       "id" : 12,
+      "runtime_data" : [
+        {
+          "name" : "cur_node",
+          "bitwidth" : 8
+        },
+        {
+          "name" : "send_time_slice",
+          "bitwidth" : 8
+        },
+        {
+          "name" : "send_port_or_node",
+          "bitwidth" : 8
+        },
+        {
+          "name" : "cur_node_1",
+          "bitwidth" : 8
+        },
+        {
+          "name" : "send_time_slice_1",
+          "bitwidth" : 8
+        },
+        {
+          "name" : "send_port_or_node_1",
+          "bitwidth" : 8
+        },
+        {
+          "name" : "cur_node_2",
+          "bitwidth" : 8
+        },
+        {
+          "name" : "send_time_slice_2",
+          "bitwidth" : 8
+        },
+        {
+          "name" : "send_port_or_node_2",
+          "bitwidth" : 8
+        },
+        {
+          "name" : "cur_node_3",
+          "bitwidth" : 8
+        },
+        {
+          "name" : "send_time_slice_3",
+          "bitwidth" : 8
+        },
+        {
+          "name" : "send_port_or_node_3",
+          "bitwidth" : 8
+        }
+      ],
+      "primitives" : [
+        {
+          "op" : "add_header",
+          "parameters" : [
+            {
+              "type" : "header",
+              "value" : "userMetadata.time_flow_entry"
+            }
+          ],
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 269,
+            "column" : 8,
+            "source_fragment" : "meta.time_flow_entry.setValid()"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["userMetadata.time_flow_entry", "cur_node"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 0
+            }
+          ],
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 270,
+            "column" : 8,
+            "source_fragment" : "meta.time_flow_entry.cur_node = cur_node"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["userMetadata.time_flow_entry", "send_time_slice"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 1
+            }
+          ],
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 271,
+            "column" : 8,
+            "source_fragment" : "meta.time_flow_entry.send_time_slice = send_time_slice"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["userMetadata.time_flow_entry", "send_port_or_node"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 2
+            }
+          ],
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 272,
+            "column" : 8,
+            "source_fragment" : "meta.time_flow_entry.send_port_or_node = send_port_or_node"
+          }
+        },
+        {
+          "op" : "add_header",
+          "parameters" : [
+            {
+              "type" : "header",
+              "value" : "ssrr_3_hop"
+            }
+          ],
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 274,
+            "column" : 8,
+            "source_fragment" : "hdr.ssrr_3_hop.setValid()"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ssrr_3_hop", "cur_node"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 3
+            }
+          ],
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 275,
+            "column" : 8,
+            "source_fragment" : "hdr.ssrr_3_hop.cur_node = cur_node_1"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ssrr_3_hop", "send_time_slice"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 4
+            }
+          ],
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 276,
+            "column" : 8,
+            "source_fragment" : "hdr.ssrr_3_hop.send_time_slice = send_time_slice_1"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ssrr_3_hop", "send_port_or_node"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 5
+            }
+          ],
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 277,
+            "column" : 8,
+            "source_fragment" : "hdr.ssrr_3_hop.send_port_or_node = send_port_or_node_1"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ssrr_3_hop", "cur_node_2"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 6
+            }
+          ],
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 279,
+            "column" : 8,
+            "source_fragment" : "hdr.ssrr_3_hop.cur_node_2 = cur_node_2"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ssrr_3_hop", "send_time_slice_2"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 7
+            }
+          ],
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 280,
+            "column" : 8,
+            "source_fragment" : "hdr.ssrr_3_hop.send_time_slice_2 = send_time_slice_2"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ssrr_3_hop", "send_port_or_node_2"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 8
+            }
+          ],
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 281,
+            "column" : 8,
+            "source_fragment" : "hdr.ssrr_3_hop.send_port_or_node_2 = send_port_or_node_2"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ssrr_3_hop", "cur_node_3"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 9
+            }
+          ],
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 283,
+            "column" : 8,
+            "source_fragment" : "hdr.ssrr_3_hop.cur_node_3 = cur_node_3"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ssrr_3_hop", "send_time_slice_3"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 10
+            }
+          ],
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 284,
+            "column" : 8,
+            "source_fragment" : "hdr.ssrr_3_hop.send_time_slice_3 = send_time_slice_3"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ssrr_3_hop", "send_port_or_node_3"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 11
+            }
+          ],
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 285,
+            "column" : 8,
+            "source_fragment" : "hdr.ssrr_3_hop.send_port_or_node_3 = send_port_or_node_3"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "MyIngress.write_time_flow_entry",
+      "id" : 13,
       "runtime_data" : [
         {
           "name" : "cur_node",
@@ -1113,7 +1427,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 263,
+            "line" : 310,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.setValid()"
           }
@@ -1132,7 +1446,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 264,
+            "line" : 311,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.cur_node = cur_node"
           }
@@ -1151,7 +1465,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 265,
+            "line" : 312,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.send_port_or_node = send_port_or_node"
           }
@@ -1170,7 +1484,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 266,
+            "line" : 313,
             "column" : 8,
             "source_fragment" : "meta.time_flow_entry.send_time_slice = send_time_slice"
           }
@@ -1179,7 +1493,7 @@
     },
     {
       "name" : "MyIngress.to_calendar_q",
-      "id" : 13,
+      "id" : 14,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1196,7 +1510,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 280,
+            "line" : 327,
             "column" : 8,
             "source_fragment" : "meta.send_time_slice = send_time_slice"
           }
@@ -1228,7 +1542,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 281,
+            "line" : 328,
             "column" : 8,
             "source_fragment" : "standard_metadata.egress_spec = egress_port"
           }
@@ -1270,7 +1584,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 283,
+            "line" : 330,
             "column" : 8,
             "source_fragment" : "hdr.ipv4.ttl = hdr.ipv4.ttl -1"
           }
@@ -1279,7 +1593,7 @@
     },
     {
       "name" : "MyIngress.to_calendar_q_table_action",
-      "id" : 14,
+      "id" : 15,
       "runtime_data" : [
         {
           "name" : "egress_port",
@@ -1305,7 +1619,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 287,
+            "line" : 334,
             "column" : 8,
             "source_fragment" : "meta.send_time_slice = send_time_slice"
           }
@@ -1324,7 +1638,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 288,
+            "line" : 335,
             "column" : 8,
             "source_fragment" : "standard_metadata.egress_spec = egress_port"
           }
@@ -1366,7 +1680,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 290,
+            "line" : 337,
             "column" : 8,
             "source_fragment" : "hdr.ipv4.ttl = hdr.ipv4.ttl -1"
           }
@@ -1375,7 +1689,7 @@
     },
     {
       "name" : "MyIngress.send_to_host",
-      "id" : 15,
+      "id" : 16,
       "runtime_data" : [
         {
           "name" : "egress_port",
@@ -1397,7 +1711,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 315,
+            "line" : 362,
             "column" : 8,
             "source_fragment" : "meta.intermediateForward = 1"
           }
@@ -1416,7 +1730,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 316,
+            "line" : 363,
             "column" : 8,
             "source_fragment" : "standard_metadata.egress_spec = egress_port"
           }
@@ -1424,8 +1738,8 @@
       ]
     },
     {
-      "name" : "tor335",
-      "id" : 16,
+      "name" : "tor382",
+      "id" : 17,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1442,7 +1756,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 6,
+            "line" : 18,
             "column" : 32,
             "source_fragment" : "0x100; ..."
           }
@@ -1457,7 +1771,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 336,
+            "line" : 383,
             "column" : 12,
             "source_fragment" : "hdr.oo_preamble.setValid()"
           }
@@ -1476,7 +1790,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 337,
+            "line" : 384,
             "column" : 6,
             "source_fragment" : "meta.intermediateForward = 0"
           }
@@ -1484,8 +1798,8 @@
       ]
     },
     {
-      "name" : "tor343",
-      "id" : 17,
+      "name" : "tor390",
+      "id" : 18,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1502,7 +1816,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 8,
+            "line" : 20,
             "column" : 35,
             "source_fragment" : "0x10; ..."
           }
@@ -1510,8 +1824,8 @@
       ]
     },
     {
-      "name" : "tor347",
-      "id" : 18,
+      "name" : "tor394",
+      "id" : 19,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1528,7 +1842,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 9,
+            "line" : 21,
             "column" : 36,
             "source_fragment" : "0x20; ..."
           }
@@ -1536,8 +1850,8 @@
       ]
     },
     {
-      "name" : "tor363",
-      "id" : 19,
+      "name" : "tor410",
+      "id" : 20,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1550,7 +1864,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 363,
+            "line" : 410,
             "column" : 20,
             "source_fragment" : "hdr.ssrr_1_hop.setValid()"
           }
@@ -1569,7 +1883,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 364,
+            "line" : 411,
             "column" : 20,
             "source_fragment" : "hdr.ssrr_1_hop.cur_node = meta.time_flow_entry.cur_node"
           }
@@ -1588,7 +1902,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 365,
+            "line" : 412,
             "column" : 20,
             "source_fragment" : "hdr.ssrr_1_hop.send_port_or_node = meta.time_flow_entry.send_port_or_node"
           }
@@ -1607,7 +1921,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 366,
+            "line" : 413,
             "column" : 20,
             "source_fragment" : "hdr.ssrr_1_hop.send_time_slice = meta.time_flow_entry.send_time_slice"
           }
@@ -1615,8 +1929,8 @@
       ]
     },
     {
-      "name" : "tor369",
-      "id" : 20,
+      "name" : "tor416",
+      "id" : 21,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1629,7 +1943,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 369,
+            "line" : 416,
             "column" : 16,
             "source_fragment" : "hdr.oo_preamble.setInvalid()"
           }
@@ -1648,7 +1962,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 5,
+            "line" : 17,
             "column" : 26,
             "source_fragment" : "0x800; ..."
           }
@@ -1657,7 +1971,7 @@
     },
     {
       "name" : "act",
-      "id" : 21,
+      "id" : 22,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1687,7 +2001,7 @@
     },
     {
       "name" : "act_0",
-      "id" : 22,
+      "id" : 23,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1716,8 +2030,8 @@
       ]
     },
     {
-      "name" : "tor375",
-      "id" : 23,
+      "name" : "tor422",
+      "id" : 24,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1744,7 +2058,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 375,
+            "line" : 422,
             "column" : 19,
             "source_fragment" : "per_hop_routing.apply().hit || hdr.oo_preamble.forward_type == TYPE_SOURCE_ROUTING"
           }
@@ -1752,8 +2066,8 @@
       ]
     },
     {
-      "name" : "tor375_0",
-      "id" : 24,
+      "name" : "tor422_0",
+      "id" : 25,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1790,7 +2104,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 375,
+            "line" : 422,
             "column" : 19,
             "source_fragment" : "per_hop_routing.apply().hit || hdr.oo_preamble.forward_type == TYPE_SOURCE_ROUTING"
           }
@@ -1798,8 +2112,8 @@
       ]
     },
     {
-      "name" : "tor386",
-      "id" : 25,
+      "name" : "tor433",
+      "id" : 26,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1812,7 +2126,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 386,
+            "line" : 433,
             "column" : 20,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           }
@@ -1821,7 +2135,7 @@
     },
     {
       "name" : "act_1",
-      "id" : 26,
+      "id" : 27,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1851,7 +2165,7 @@
     },
     {
       "name" : "act_2",
-      "id" : 27,
+      "id" : 28,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1880,8 +2194,8 @@
       ]
     },
     {
-      "name" : "tor390",
-      "id" : 28,
+      "name" : "tor437",
+      "id" : 29,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1915,7 +2229,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 390,
+            "line" : 437,
             "column" : 20,
             "source_fragment" : "hdr.oo_preamble.forward_type == TYPE_SOURCE_ROUTING && ..."
           }
@@ -1923,8 +2237,8 @@
       ]
     },
     {
-      "name" : "tor390_0",
-      "id" : 29,
+      "name" : "tor437_0",
+      "id" : 30,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -1951,7 +2265,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 390,
+            "line" : 437,
             "column" : 20,
             "source_fragment" : "hdr.oo_preamble.forward_type == TYPE_SOURCE_ROUTING && ..."
           }
@@ -1959,29 +2273,7 @@
       ]
     },
     {
-      "name" : "tor394",
-      "id" : 30,
-      "runtime_data" : [],
-      "primitives" : [
-        {
-          "op" : "mark_to_drop",
-          "parameters" : [
-            {
-              "type" : "header",
-              "value" : "standard_metadata"
-            }
-          ],
-          "source_info" : {
-            "filename" : "tor.p4",
-            "line" : 394,
-            "column" : 20,
-            "source_fragment" : "mark_to_drop(standard_metadata)"
-          }
-        }
-      ]
-    },
-    {
-      "name" : "tor400",
+      "name" : "tor441",
       "id" : 31,
       "runtime_data" : [],
       "primitives" : [
@@ -1995,7 +2287,29 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 400,
+            "line" : 441,
+            "column" : 20,
+            "source_fragment" : "mark_to_drop(standard_metadata)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "tor447",
+      "id" : 32,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "mark_to_drop",
+          "parameters" : [
+            {
+              "type" : "header",
+              "value" : "standard_metadata"
+            }
+          ],
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 447,
             "column" : 12,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           }
@@ -2003,8 +2317,8 @@
       ]
     },
     {
-      "name" : "tor416",
-      "id" : 32,
+      "name" : "tor463",
+      "id" : 33,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -2034,7 +2348,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 416,
+            "line" : 463,
             "column" : 27,
             "source_fragment" : "(bit<32>)standard_metadata.egress_port"
           }
@@ -2053,7 +2367,7 @@
           ],
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 416,
+            "line" : 463,
             "column" : 8,
             "source_fragment" : "port_counter.count((bit<32>)standard_metadata.egress_port)"
           }
@@ -2067,7 +2381,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "tor.p4",
-        "line" : 154,
+        "line" : 166,
         "column" : 8,
         "source_fragment" : "MyIngress"
       },
@@ -2078,7 +2392,7 @@
           "id" : 0,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 330,
+            "line" : 377,
             "column" : 8,
             "source_fragment" : "ts_to_slice()"
           },
@@ -2103,11 +2417,11 @@
           }
         },
         {
-          "name" : "tbl_tor335",
+          "name" : "tbl_tor382",
           "id" : 1,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 335,
+            "line" : 382,
             "column" : 35,
             "source_fragment" : "= TYPE_OpenOptics; ..."
           },
@@ -2118,14 +2432,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [16],
-          "actions" : ["tor335"],
+          "action_ids" : [17],
+          "actions" : ["tor382"],
           "base_default_next" : "MyIngress.ip_to_dst_node",
           "next_tables" : {
-            "tor335" : "MyIngress.ip_to_dst_node"
+            "tor382" : "MyIngress.ip_to_dst_node"
           },
           "default_entry" : {
-            "action_id" : 16,
+            "action_id" : 17,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2136,7 +2450,7 @@
           "id" : 2,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 173,
+            "line" : 185,
             "column" : 10,
             "source_fragment" : "ip_to_dst_node"
           },
@@ -2173,7 +2487,7 @@
           "id" : 3,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 243,
+            "line" : 289,
             "column" : 10,
             "source_fragment" : "add_source_routing_entries"
           },
@@ -2197,12 +2511,12 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [9, 10, 11, 5, 1],
-          "actions" : ["MyIngress.write_ssrr_header_0", "MyIngress.write_ssrr_header_1", "MyIngress.write_ssrr_header_2", "MyIngress.drop", "NoAction"],
+          "action_ids" : [9, 10, 11, 12, 5, 1],
+          "actions" : ["MyIngress.write_ssrr_header_0", "MyIngress.write_ssrr_header_1", "MyIngress.write_ssrr_header_2", "MyIngress.write_ssrr_header_3", "MyIngress.drop", "NoAction"],
           "base_default_next" : null,
           "next_tables" : {
-            "__HIT__" : "tbl_tor343",
-            "__MISS__" : "tbl_tor347"
+            "__HIT__" : "tbl_tor390",
+            "__MISS__" : "tbl_tor394"
           },
           "default_entry" : {
             "action_id" : 1,
@@ -2212,40 +2526,11 @@
           }
         },
         {
-          "name" : "tbl_tor343",
+          "name" : "tbl_tor390",
           "id" : 4,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 343,
-            "column" : 45,
-            "source_fragment" : "="
-          },
-          "key" : [],
-          "match_type" : "exact",
-          "type" : "simple",
-          "max_size" : 1024,
-          "with_counters" : false,
-          "support_timeout" : false,
-          "direct_meters" : null,
-          "action_ids" : [17],
-          "actions" : ["tor343"],
-          "base_default_next" : "node_9",
-          "next_tables" : {
-            "tor343" : "node_9"
-          },
-          "default_entry" : {
-            "action_id" : 17,
-            "action_const" : true,
-            "action_data" : [],
-            "action_entry_const" : true
-          }
-        },
-        {
-          "name" : "tbl_tor347",
-          "id" : 5,
-          "source_info" : {
-            "filename" : "tor.p4",
-            "line" : 347,
+            "line" : 390,
             "column" : 45,
             "source_fragment" : "="
           },
@@ -2257,13 +2542,42 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [18],
-          "actions" : ["tor347"],
+          "actions" : ["tor390"],
           "base_default_next" : "node_9",
           "next_tables" : {
-            "tor347" : "node_9"
+            "tor390" : "node_9"
           },
           "default_entry" : {
             "action_id" : 18,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_tor394",
+          "id" : 5,
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 394,
+            "column" : 45,
+            "source_fragment" : "="
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [19],
+          "actions" : ["tor394"],
+          "base_default_next" : "node_9",
+          "next_tables" : {
+            "tor394" : "node_9"
+          },
+          "default_entry" : {
+            "action_id" : 19,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2274,7 +2588,7 @@
           "id" : 6,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 319,
+            "line" : 366,
             "column" : 10,
             "source_fragment" : "arrive_at_dst"
           },
@@ -2292,7 +2606,7 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [15, 4],
+          "action_ids" : [16, 4],
           "actions" : ["MyIngress.send_to_host", "NoAction"],
           "base_default_next" : null,
           "next_tables" : {
@@ -2307,11 +2621,11 @@
           }
         },
         {
-          "name" : "tbl_tor363",
+          "name" : "tbl_tor410",
           "id" : 7,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 363,
+            "line" : 410,
             "column" : 20,
             "source_fragment" : "hdr.ssrr_1_hop.setValid(); ..."
           },
@@ -2322,25 +2636,25 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [19],
-          "actions" : ["tor363"],
-          "base_default_next" : "tbl_tor369",
+          "action_ids" : [20],
+          "actions" : ["tor410"],
+          "base_default_next" : "tbl_tor416",
           "next_tables" : {
-            "tor363" : "tbl_tor369"
+            "tor410" : "tbl_tor416"
           },
           "default_entry" : {
-            "action_id" : 19,
+            "action_id" : 20,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
           }
         },
         {
-          "name" : "tbl_tor369",
+          "name" : "tbl_tor416",
           "id" : 8,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 369,
+            "line" : 416,
             "column" : 16,
             "source_fragment" : "hdr.oo_preamble.setInvalid(); ..."
           },
@@ -2351,14 +2665,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [20],
-          "actions" : ["tor369"],
+          "action_ids" : [21],
+          "actions" : ["tor416"],
           "base_default_next" : null,
           "next_tables" : {
-            "tor369" : null
+            "tor416" : null
           },
           "default_entry" : {
-            "action_id" : 20,
+            "action_id" : 21,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2369,7 +2683,7 @@
           "id" : 9,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 269,
+            "line" : 316,
             "column" : 10,
             "source_fragment" : "per_hop_routing"
           },
@@ -2393,7 +2707,7 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [12, 2],
+          "action_ids" : [13, 2],
           "actions" : ["MyIngress.write_time_flow_entry", "NoAction"],
           "base_default_next" : null,
           "next_tables" : {
@@ -2417,14 +2731,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [21],
+          "action_ids" : [22],
           "actions" : ["act"],
           "base_default_next" : "node_17",
           "next_tables" : {
             "act" : "node_17"
           },
           "default_entry" : {
-            "action_id" : 21,
+            "action_id" : 22,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2440,40 +2754,11 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [22],
+          "action_ids" : [23],
           "actions" : ["act_0"],
           "base_default_next" : "node_17",
           "next_tables" : {
             "act_0" : "node_17"
-          },
-          "default_entry" : {
-            "action_id" : 22,
-            "action_const" : true,
-            "action_data" : [],
-            "action_entry_const" : true
-          }
-        },
-        {
-          "name" : "tbl_tor375",
-          "id" : 12,
-          "source_info" : {
-            "filename" : "tor.p4",
-            "line" : 375,
-            "column" : 19,
-            "source_fragment" : "per_hop_routing.apply().hit || hdr.oo_preamble.forward_type == TYPE_SOURCE_ROUTING"
-          },
-          "key" : [],
-          "match_type" : "exact",
-          "type" : "simple",
-          "max_size" : 1024,
-          "with_counters" : false,
-          "support_timeout" : false,
-          "direct_meters" : null,
-          "action_ids" : [23],
-          "actions" : ["tor375"],
-          "base_default_next" : "node_20",
-          "next_tables" : {
-            "tor375" : "node_20"
           },
           "default_entry" : {
             "action_id" : 23,
@@ -2483,11 +2768,11 @@
           }
         },
         {
-          "name" : "tbl_tor375_0",
-          "id" : 13,
+          "name" : "tbl_tor422",
+          "id" : 12,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 375,
+            "line" : 422,
             "column" : 19,
             "source_fragment" : "per_hop_routing.apply().hit || hdr.oo_preamble.forward_type == TYPE_SOURCE_ROUTING"
           },
@@ -2499,13 +2784,42 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [24],
-          "actions" : ["tor375_0"],
+          "actions" : ["tor422"],
           "base_default_next" : "node_20",
           "next_tables" : {
-            "tor375_0" : "node_20"
+            "tor422" : "node_20"
           },
           "default_entry" : {
             "action_id" : 24,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_tor422_0",
+          "id" : 13,
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 422,
+            "column" : 19,
+            "source_fragment" : "per_hop_routing.apply().hit || hdr.oo_preamble.forward_type == TYPE_SOURCE_ROUTING"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [25],
+          "actions" : ["tor422_0"],
+          "base_default_next" : "node_20",
+          "next_tables" : {
+            "tor422_0" : "node_20"
+          },
+          "default_entry" : {
+            "action_id" : 25,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2516,7 +2830,7 @@
           "id" : 14,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 293,
+            "line" : 340,
             "column" : 10,
             "source_fragment" : "cal_port_slice_to_node"
           },
@@ -2540,7 +2854,7 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [14, 6],
+          "action_ids" : [15, 6],
           "actions" : ["MyIngress.to_calendar_q_table_action", "MyIngress.drop"],
           "base_default_next" : "node_25",
           "next_tables" : {
@@ -2559,7 +2873,7 @@
           "id" : 15,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 381,
+            "line" : 428,
             "column" : 24,
             "source_fragment" : "to_calendar_q(send_time_slice = meta.time_flow_entry.send_time_slice, ..."
           },
@@ -2570,25 +2884,25 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [13],
+          "action_ids" : [14],
           "actions" : ["MyIngress.to_calendar_q"],
           "base_default_next" : "node_25",
           "next_tables" : {
             "MyIngress.to_calendar_q" : "node_25"
           },
           "default_entry" : {
-            "action_id" : 13,
+            "action_id" : 14,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
           }
         },
         {
-          "name" : "tbl_tor386",
+          "name" : "tbl_tor433",
           "id" : 16,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 386,
+            "line" : 433,
             "column" : 20,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           },
@@ -2599,14 +2913,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [25],
-          "actions" : ["tor386"],
+          "action_ids" : [26],
+          "actions" : ["tor433"],
           "base_default_next" : "node_25",
           "next_tables" : {
-            "tor386" : "node_25"
+            "tor433" : "node_25"
           },
           "default_entry" : {
-            "action_id" : 25,
+            "action_id" : 26,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2617,7 +2931,7 @@
           "id" : 17,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 305,
+            "line" : 352,
             "column" : 10,
             "source_fragment" : "verify_desired_node"
           },
@@ -2659,14 +2973,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [26],
+          "action_ids" : [27],
           "actions" : ["act_1"],
-          "base_default_next" : "tbl_tor390",
+          "base_default_next" : "tbl_tor437",
           "next_tables" : {
-            "act_1" : "tbl_tor390"
+            "act_1" : "tbl_tor437"
           },
           "default_entry" : {
-            "action_id" : 26,
+            "action_id" : 27,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2682,40 +2996,11 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [27],
-          "actions" : ["act_2"],
-          "base_default_next" : "tbl_tor390",
-          "next_tables" : {
-            "act_2" : "tbl_tor390"
-          },
-          "default_entry" : {
-            "action_id" : 27,
-            "action_const" : true,
-            "action_data" : [],
-            "action_entry_const" : true
-          }
-        },
-        {
-          "name" : "tbl_tor390",
-          "id" : 20,
-          "source_info" : {
-            "filename" : "tor.p4",
-            "line" : 390,
-            "column" : 20,
-            "source_fragment" : "hdr.oo_preamble.forward_type == TYPE_SOURCE_ROUTING && ..."
-          },
-          "key" : [],
-          "match_type" : "exact",
-          "type" : "simple",
-          "max_size" : 1024,
-          "with_counters" : false,
-          "support_timeout" : false,
-          "direct_meters" : null,
           "action_ids" : [28],
-          "actions" : ["tor390"],
-          "base_default_next" : "node_31",
+          "actions" : ["act_2"],
+          "base_default_next" : "tbl_tor437",
           "next_tables" : {
-            "tor390" : "node_31"
+            "act_2" : "tbl_tor437"
           },
           "default_entry" : {
             "action_id" : 28,
@@ -2725,11 +3010,11 @@
           }
         },
         {
-          "name" : "tbl_tor390_0",
-          "id" : 21,
+          "name" : "tbl_tor437",
+          "id" : 20,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 390,
+            "line" : 437,
             "column" : 20,
             "source_fragment" : "hdr.oo_preamble.forward_type == TYPE_SOURCE_ROUTING && ..."
           },
@@ -2741,10 +3026,10 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [29],
-          "actions" : ["tor390_0"],
+          "actions" : ["tor437"],
           "base_default_next" : "node_31",
           "next_tables" : {
-            "tor390_0" : "node_31"
+            "tor437" : "node_31"
           },
           "default_entry" : {
             "action_id" : 29,
@@ -2754,11 +3039,40 @@
           }
         },
         {
-          "name" : "tbl_tor394",
+          "name" : "tbl_tor437_0",
+          "id" : 21,
+          "source_info" : {
+            "filename" : "tor.p4",
+            "line" : 437,
+            "column" : 20,
+            "source_fragment" : "hdr.oo_preamble.forward_type == TYPE_SOURCE_ROUTING && ..."
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [30],
+          "actions" : ["tor437_0"],
+          "base_default_next" : "node_31",
+          "next_tables" : {
+            "tor437_0" : "node_31"
+          },
+          "default_entry" : {
+            "action_id" : 30,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_tor441",
           "id" : 22,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 394,
+            "line" : 441,
             "column" : 20,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           },
@@ -2769,25 +3083,25 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [30],
-          "actions" : ["tor394"],
+          "action_ids" : [31],
+          "actions" : ["tor441"],
           "base_default_next" : null,
           "next_tables" : {
-            "tor394" : null
+            "tor441" : null
           },
           "default_entry" : {
-            "action_id" : 30,
+            "action_id" : 31,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
           }
         },
         {
-          "name" : "tbl_tor400",
+          "name" : "tbl_tor447",
           "id" : 23,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 400,
+            "line" : 447,
             "column" : 12,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           },
@@ -2798,14 +3112,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [31],
-          "actions" : ["tor400"],
+          "action_ids" : [32],
+          "actions" : ["tor447"],
           "base_default_next" : null,
           "next_tables" : {
-            "tor400" : null
+            "tor447" : null
           },
           "default_entry" : {
-            "action_id" : 31,
+            "action_id" : 32,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2819,7 +3133,7 @@
           "id" : 0,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 333,
+            "line" : 380,
             "column" : 12,
             "source_fragment" : "hdr.ipv4.isValid()"
           },
@@ -2834,7 +3148,7 @@
               }
             }
           },
-          "true_next" : "tbl_tor335",
+          "true_next" : "tbl_tor382",
           "false_next" : "node_9"
         },
         {
@@ -2842,7 +3156,7 @@
           "id" : 1,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 354,
+            "line" : 401,
             "column" : 12,
             "source_fragment" : "hdr.oo_preamble.isValid()"
           },
@@ -2858,14 +3172,14 @@
             }
           },
           "true_next" : "MyIngress.arrive_at_dst",
-          "false_next" : "tbl_tor400"
+          "false_next" : "tbl_tor447"
         },
         {
           "name" : "node_11",
           "id" : 2,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 358,
+            "line" : 405,
             "column" : 20,
             "source_fragment" : "hdr.oo_preamble.forward_type == TYPE_SOURCE_ROUTING && ..."
           },
@@ -2903,8 +3217,8 @@
               }
             }
           },
-          "true_next" : "tbl_tor363",
-          "false_next" : "tbl_tor369"
+          "true_next" : "tbl_tor410",
+          "false_next" : "tbl_tor416"
         },
         {
           "name" : "node_17",
@@ -2920,8 +3234,8 @@
               }
             }
           },
-          "true_next" : "tbl_tor375",
-          "false_next" : "tbl_tor375_0"
+          "true_next" : "tbl_tor422",
+          "false_next" : "tbl_tor422_0"
         },
         {
           "name" : "node_20",
@@ -2938,14 +3252,14 @@
             }
           },
           "true_next" : "node_21",
-          "false_next" : "tbl_tor386"
+          "false_next" : "tbl_tor433"
         },
         {
           "name" : "node_21",
           "id" : 5,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 378,
+            "line" : 425,
             "column" : 24,
             "source_fragment" : "meta.time_flow_entry.send_time_slice == 255"
           },
@@ -2971,7 +3285,7 @@
           "id" : 6,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 390,
+            "line" : 437,
             "column" : 20,
             "source_fragment" : "hdr.oo_preamble.forward_type == TYPE_SOURCE_ROUTING"
           },
@@ -2990,7 +3304,7 @@
             }
           },
           "true_next" : "MyIngress.verify_desired_node",
-          "false_next" : "tbl_tor390_0"
+          "false_next" : "tbl_tor437_0"
         },
         {
           "name" : "node_31",
@@ -3007,7 +3321,7 @@
             }
           },
           "false_next" : null,
-          "true_next" : "tbl_tor394"
+          "true_next" : "tbl_tor441"
         }
       ]
     },
@@ -3016,18 +3330,18 @@
       "id" : 1,
       "source_info" : {
         "filename" : "tor.p4",
-        "line" : 410,
+        "line" : 457,
         "column" : 8,
         "source_fragment" : "MyEgress"
       },
-      "init_table" : "tbl_tor416",
+      "init_table" : "tbl_tor463",
       "tables" : [
         {
-          "name" : "tbl_tor416",
+          "name" : "tbl_tor463",
           "id" : 24,
           "source_info" : {
             "filename" : "tor.p4",
-            "line" : 416,
+            "line" : 463,
             "column" : 8,
             "source_fragment" : "port_counter.count((bit<32>)standard_metadata.egress_port)"
           },
@@ -3038,14 +3352,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [32],
-          "actions" : ["tor416"],
+          "action_ids" : [33],
+          "actions" : ["tor463"],
           "base_default_next" : null,
           "next_tables" : {
-            "tor416" : null
+            "tor463" : null
           },
           "default_entry" : {
-            "action_id" : 32,
+            "action_id" : 33,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -3062,7 +3376,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "tor.p4",
-        "line" : 426,
+        "line" : 473,
         "column" : 4,
         "source_fragment" : "update_checksum( ..."
       },

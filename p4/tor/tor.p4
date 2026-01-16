@@ -250,6 +250,40 @@ control MyIngress(inout headers hdr,
         hdr.ssrr_2_hop.send_time_slice_2 = send_time_slice_2;
         hdr.ssrr_2_hop.send_port_or_node_2 = send_port_or_node_2;
     }
+
+    action write_ssrr_header_3(
+        node_t cur_node,
+        ts_t send_time_slice,
+        port_t send_port_or_node,
+        node_t cur_node_1,
+        ts_t send_time_slice_1,
+        port_t send_port_or_node_1,
+        node_t cur_node_2,
+        ts_t send_time_slice_2,
+        port_t send_port_or_node_2,
+        node_t cur_node_3,
+        ts_t send_time_slice_3,
+        port_t send_port_or_node_3
+        ) {
+
+        meta.time_flow_entry.setValid();
+        meta.time_flow_entry.cur_node = cur_node;
+        meta.time_flow_entry.send_time_slice = send_time_slice;
+        meta.time_flow_entry.send_port_or_node = send_port_or_node;
+
+        hdr.ssrr_3_hop.setValid();
+        hdr.ssrr_3_hop.cur_node = cur_node_1;
+        hdr.ssrr_3_hop.send_time_slice = send_time_slice_1;
+        hdr.ssrr_3_hop.send_port_or_node = send_port_or_node_1;
+
+        hdr.ssrr_3_hop.cur_node_2 = cur_node_2;
+        hdr.ssrr_3_hop.send_time_slice_2 = send_time_slice_2;
+        hdr.ssrr_3_hop.send_port_or_node_2 = send_port_or_node_2;
+
+        hdr.ssrr_3_hop.cur_node_3 = cur_node_3;
+        hdr.ssrr_3_hop.send_time_slice_3 = send_time_slice_3;
+        hdr.ssrr_3_hop.send_port_or_node_3 = send_port_or_node_3;
+    }
     
     
     table add_source_routing_entries {
@@ -261,6 +295,7 @@ control MyIngress(inout headers hdr,
             write_ssrr_header_0;
             write_ssrr_header_1;
             write_ssrr_header_2;
+            write_ssrr_header_3;
             drop;
         }
         size = 1024;
