@@ -13,7 +13,6 @@ import networkx as nx
 import openoptics.utils as utils
 from openoptics.backends import create_backend
 from openoptics.DeviceManager import DeviceManager
-from openoptics.Dashboard import Dashboard
 from openoptics.OpticalCLI import OpticalCLI
 from openoptics.TimeFlowTable import Path, TimeFlowEntry
 
@@ -126,6 +125,7 @@ class BaseNetwork:
         )
 
         if self.use_webserver:
+            from openoptics.Dashboard import Dashboard
             # Ensure Redis is running and DB migrations are applied
             os.system("service redis-server start > /dev/null 2>&1")
             os.system(
