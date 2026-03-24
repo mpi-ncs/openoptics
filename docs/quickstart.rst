@@ -97,6 +97,20 @@ Every OpenOptics network is a ``BaseNetwork`` object:
        time_slice_duration_ms = 32, # in ms
        use_webserver=True)
 
+The ``backend`` parameter selects the network simulator or hardware target (currently ``"Mininet"``).
+Backend-specific options are passed as extra keyword arguments and validated at construction time.
+For Mininet, ``link_delay_ms`` sets per-link propagation delay (default: 0):
+
+.. code-block:: python
+
+   net = Toolbox.BaseNetwork(
+       name="my_network",
+       backend="Mininet",
+       nb_node=4,
+       time_slice_duration_ms=32,
+       link_delay_ms=1,         # 1 ms propagation delay (Mininet-specific)
+       use_webserver=True)
+
 You can use ``connect(node1,port1,node2,port2,time_slice)`` to connect ports of two nodes at the given time slice.
 
 .. code-block:: python

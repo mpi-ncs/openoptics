@@ -21,6 +21,8 @@ Repository = "https://github.com/your-org/openoptics"
 [tool.setuptools]
 packages = [
     "openoptics",
+    "openoptics.backends",
+    "openoptics.backends.mininet",
 #    "openopticslib"
 ]
 

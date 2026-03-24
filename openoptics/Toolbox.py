@@ -11,15 +11,11 @@
 import os
 import networkx as nx
 import openoptics.utils as utils
+from openoptics.backends import create_backend
 from openoptics.DeviceManager import DeviceManager
 from openoptics.Dashboard import Dashboard
 from openoptics.OpticalCLI import OpticalCLI
 from openoptics.TimeFlowTable import Path, TimeFlowEntry
-
-from mininet.net import Mininet
-from mininet.topo import Topo
-from mininet.link import Link, TCLink
-from .p4_mininet import P4Switch, P4Host
 
 from typing import List, Union
 
@@ -45,9 +41,11 @@ class BaseNetwork:
         backend="Mininet",
         time_slice_duration_ms=128,
         guardband_ms=25,
-        link_delay_ms=0, # Mininet-specific parameter.
         arch_mode="TO",  # TO for traffic-oblivious, TA for traffic-aware
         use_webserver=True,
+        ocs_tor_link_bw=1000,
+        tor_host_link_bw=1000,
+        **backend_kwargs,
     ):
         """
         Initialize the BaseNetwork.
@@ -59,55 +57,48 @@ class BaseNetwork:
             nb_link (int, optional): Number of links per node (defaults to 1)
             nb_host_per_tor (int, optional): Number of hosts per ToR (defaults to 1)
             time_slice_duration_ms (int, optional): Duration of each time slice in milliseconds (defaults to 128)
+            guardband_ms (int, optional): Guard band in milliseconds (defaults to 25)
             arch_mode (str, optional): architecture mode: "TO" or "TA" (defaults to "TO")
             use_webserver (bool, optional): Whether to use web server for dashboard (defaults to True)
+            ocs_tor_link_bw (int, optional): Bandwidth in Mbps for OCS↔ToR links (defaults to 1000)
+            tor_host_link_bw (int, optional): Bandwidth in Mbps for ToR↔host links (defaults to 1000)
+            **backend_kwargs: Backend-specific parameters (e.g. ``link_delay_ms`` for
+                Mininet/ns-3).  Validated immediately against the selected backend's
+                ``accepted_kwargs()``; unknown names raise ``ValueError``.
         """
 
-        self.thrift_port = 9090  # default thrift port
         self.host_tor_port = 0
         assert nb_link > 0
         self.tor_host_port = nb_link
         self.tor_ocs_ports = list(range(nb_link))
 
         self.name = name
-        self.backend = backend
         self.nb_time_slices = 1
         self.time_slice_duration_ms = time_slice_duration_ms
-        self.guardband_ms = guardband_ms + link_delay_ms
-        self.link_delay_ms = link_delay_ms
+        self.guardband_ms = guardband_ms
         self.arch_mode = arch_mode
         self.calendar_queue_mode = 0 if arch_mode == "TO" else 1
 
         self.slice_to_topo = {}
-        self.mininet_topo = None
-        self.mininet_net = None
         self.nb_node = nb_node
         self.nb_link = nb_link
-        self.nb_host_per_tor = nb_host_per_tor  # Number of hosts for each ToR
-        self.ip_to_tor = {}
+        self.nb_host_per_tor = nb_host_per_tor
         self.nodes_created = False
 
-        """
-        ocs_sw_path=f"openopticslib/optical_switch/optical_switch"
-        ocs_json_path=f"openopticslib/ocs.json"
-        tor_sw_path=f"openopticslib/tor_switch/tor_switch"
-        tor_json_path=f"openopticslib/tor.json"
-        cli_path=f"openopticslib/runtime_CLI"
-        """
-        root = ""
-        ocs_sw_path = f"{root}/behavioral-model/targets/optical_switch/optical_switch"
-        ocs_json_path = f"{root}/openoptics/p4/ocs/ocs.json"
-        tor_sw_path = f"{root}/behavioral-model/targets/tor_switch/tor_switch"
-        tor_json_path = f"{root}/openoptics/p4/tor/tor.json"
-        cli_path = f"{root}/behavioral-model/targets/simple_switch/runtime_CLI"
-
-        self.ocs_sw_path = ocs_sw_path
-        self.ocs_json_path = ocs_json_path
-        self.tor_sw_path = tor_sw_path
-        self.tor_json_path = tor_json_path
-        self.cli_path = cli_path
-
         self.use_webserver = use_webserver
+        self.ocs_tor_link_bw = ocs_tor_link_bw
+        self.tor_host_link_bw = tor_host_link_bw
+
+        self._backend = create_backend(backend)
+
+        accepted = type(self._backend).accepted_kwargs()
+        unknown = set(backend_kwargs) - accepted
+        if unknown:
+            raise ValueError(
+                f"Backend '{backend}' does not accept: {unknown}. "
+                f"Accepted backend-specific kwargs: {accepted or 'none'}"
+            )
+        self._backend_kwargs = backend_kwargs
 
         print("Setting up OpenOptics...")
 
@@ -129,12 +120,23 @@ class BaseNetwork:
         http://localhost:8001.
         """
         self.device_manager = DeviceManager(
-            self.mininet_net,
+            self._backend,
             self.tor_ocs_ports,
             nb_queue=self.nb_time_slices if self.arch_mode == "TO" else self.nb_node,
         )
 
         if self.use_webserver:
+            # Ensure Redis is running and DB migrations are applied
+            os.system("service redis-server start > /dev/null 2>&1")
+            os.system(
+                "python3 /openoptics/openoptics/dashboard/manage.py makemigrations dashboardapp"
+                " > /dev/null 2>&1"
+            )
+            os.system(
+                "python3 /openoptics/openoptics/dashboard/manage.py migrate"
+                " > /dev/null 2>&1"
+            )
+
             self.dashboard = Dashboard(
                 self.slice_to_topo,
                 self.device_manager,
@@ -144,10 +146,13 @@ class BaseNetwork:
                 else self.nb_node,
             )
             self.dashboard.start()
+            os.system("pkill -f 'manage.py runserver' > /dev/null 2>&1")
             os.system(
-                "python3 /openoptics/openoptics/dashboard/manage.py runserver localhost:8001 > /dev/null 2>&1 &"
+                "python3 /openoptics/openoptics/dashboard/manage.py runserver localhost:8001"
+                " > /tmp/openoptics_dashboard.log 2>&1 &"
             )
             print("Access dashboard at http://localhost:8001")
+            #print("Dashboard log: /tmp/openoptics_dashboard.log")
 
     def start_cli(self):
         """
@@ -161,110 +166,29 @@ class BaseNetwork:
         """
         Stop the network.
 
-        Stops the dashboard (if running) and the Mininet network.
+        Stops the dashboard (if running) and the backend network.
         """
         if self.use_webserver:
             self.dashboard.stop()
-        self.mininet_net.stop()
+        self._backend.stop()
 
     def create_nodes(self):
-        """Create nodes on the choice of backend"""
-        if self.backend == "Mininet":
-            self.create_nodes_mininet()
-        else:
-            raise ValueError(f"Unsupported backend {self.backend}")
-
-    def create_nodes_mininet(self):
-        """
-        Add OCS and Nodes to Mininet Topo().
-
-        Creates the Mininet topology with OCS switch and ToR switches,
-        establishes connections between them, and starts the network.
-        To-do: Move backend-related code to a seperate class/file
-        """
-        os.system("mn -c > /dev/null 2>&1")
-
-        print("Setting up Mininet network...")
-        self.mininet_topo = Topo()
-        # Add switches to mininet topology, store metadata in self.nodes dictionary
-        ocs = self.mininet_topo.addSwitch(
-            "ocs",
-            dpid="0",
-            sw_path=self.ocs_sw_path,
-            json_path=self.ocs_json_path,
-            thrift_port=self.thrift_port,
-            pcap_dump=False,
+        """Create nodes via the configured backend."""
+        self._backend.setup(
+            nb_node=self.nb_node,
+            nb_host_per_tor=self.nb_host_per_tor,
+            nb_link=self.nb_link,
             nb_time_slices=self.nb_time_slices,
             time_slice_duration_ms=self.time_slice_duration_ms,
-            cls=P4Switch,
+            guardband_ms=self.guardband_ms,
+            tor_host_port=self.tor_host_port,
+            host_tor_port=self.host_tor_port,
+            tor_ocs_ports=self.tor_ocs_ports,
+            calendar_queue_mode=self.calendar_queue_mode,
+            ocs_tor_link_bw=self.ocs_tor_link_bw,
+            tor_host_link_bw=self.tor_host_link_bw,
+            **self._backend_kwargs,
         )
-        self.thrift_port += 1
-        print("Optical switch created.")
-
-        for tor_id in range(self.nb_node):
-            tor_switch = self.mininet_topo.addSwitch(
-                f"tor{tor_id}",
-                dpid=f"{tor_id + 1}",
-                sw_path=self.tor_sw_path,
-                json_path=self.tor_json_path,
-                thrift_port=self.thrift_port,
-                pcap_dump=False,
-                tor_id=tor_id,
-                # In TA, we have a calendar queue for each node
-                nb_time_slices=self.nb_time_slices
-                if self.calendar_queue_mode == 0
-                else self.nb_node,
-                time_slice_duration_ms=self.time_slice_duration_ms,
-                guardband_ms=self.guardband_ms,
-                calendar_queue_mode=self.calendar_queue_mode,
-                cls=P4Switch,
-            )
-            # ToR connect tor_ocs_ports to the OCS
-            for link_id in range(self.nb_link):
-                #print(f"Connect {ocs} port {self.cal_node_port_to_ocs_port(tor_id, link_id)} and {tor_switch} port {self.tor_ocs_ports[link_id]}")
-                self.mininet_topo.addLink(
-                    node1=ocs,
-                    node2=tor_switch,
-                    port1=self.cal_node_port_to_ocs_port(tor_id, link_id),
-                    port2=self.tor_ocs_ports[link_id],
-                    delay=f'{self.link_delay_ms}ms'
-                )
-            self.thrift_port += 1
-
-            # Connect hosts to ToR switches
-            for _ in range(self.nb_host_per_tor):  # Default to 1
-                ip = f"10.0.{tor_id}.1"  # To-do: make it configurable in setting
-                mac = "00:aa:bb:00:00:%02x" % tor_id
-                host = self.mininet_topo.addHost("h" + str(tor_id), ip=ip, mac=mac)
-                # print(f"h{tor_id}: {ip} {mac}")
-                self.mininet_topo.addLink(
-                    node1=host,
-                    node2=tor_switch,
-                    port1=self.host_tor_port,
-                    port2=self.tor_host_port,
-                    bw=1000,
-                    loss=0,
-                )
-                self.ip_to_tor[ip] = tor_id
-
-        print(f"{self.nb_node} ToR switches created.")
-        # for link in self.mininet_topo.links(withKeys=True, withInfo=True):
-        #    print(link)
-        print("Starting Mininet network...")
-        self.mininet_net = Mininet(
-            self.mininet_topo, host=P4Host, switch=P4Switch, controller=None,
-            link=TCLink
-        )
-        self.mininet_net.staticArp()
-
-        for id in range(self.nb_node):
-            h = self.mininet_net.get(f"h{id}")
-            ip = f"10.0.{id}.1"
-            mac = "00:aa:bb:00:00:%02x" % id
-            h.setARP(ip, mac)
-
-        self.mininet_net.start()
-
         self.setup_nodes()
 
     def cal_node_port_to_ocs_port(self, node_id, port_id):
@@ -289,8 +213,6 @@ class BaseNetwork:
         """
         ocs_slice_port1_port2 = []
         for ts, graph in self.slice_to_topo.items():
-            # print(f"edge list: {nx.to_edgelist(graph)}")
-            # We used DiGraph to guarantee node1 and node2 are in added order.
             for node1, node2, attr in nx.to_edgelist(graph):
                 port1, port2 = attr["port1"], attr["port2"]
                 ocs_port1 = self.cal_node_port_to_ocs_port(node1, port1)
@@ -299,9 +221,8 @@ class BaseNetwork:
 
         ocs_commands = utils.gen_ocs_commands(ocs_slice_port1_port2)
 
-        utils.load_table(
-            backend=self.backend,
-            switch=self.mininet_net.nameToNode["ocs"],  # to-be-updated
+        self._backend.load_table(
+            switch_name="ocs",
             table_commands=ocs_commands,
             print_flag=False,
         )
@@ -313,10 +234,10 @@ class BaseNetwork:
         Configures the ToR switches with necessary routing and forwarding tables
         including IP to destination mappings, arrival verification, and port calculation.
         """
-
         print("Setting up switch tables...")
 
-        ip_to_dst_commands = utils.tor_table_ip_to_dst(self.ip_to_tor)
+        ip_to_tor = self._backend.get_ip_to_tor()
+        ip_to_dst_commands = utils.tor_table_ip_to_dst(ip_to_tor)
 
         for tor_id in range(self.nb_node):
             arrive_at_dst = utils.tor_table_arrive_at_dst(tor_id, self.tor_host_port)
@@ -325,10 +246,8 @@ class BaseNetwork:
                 tor_id, self.slice_to_topo
             )
 
-            switch = self.mininet_net.nameToNode[f"tor{tor_id}"]
-            utils.load_table(
-                backend=self.backend,
-                switch=switch,
+            self._backend.load_table(
+                switch_name=f"tor{tor_id}",
                 table_commands=ip_to_dst_commands
                 + arrive_at_dst
                 + verify_desired_node
@@ -336,6 +255,7 @@ class BaseNetwork:
                 print_flag=False,
                 save_flag=False,
             )
+
     def start(self):
         """
         Start OpenOptics user interface (CLI, dashboard, ...).
@@ -362,10 +282,6 @@ class BaseNetwork:
             Whether the traffic aware architecture is successfully deployed.
         """
 
-        # In commercial switches, buffer is port-associated. Once the packet is buffered to a port,
-        # it will be sent out from the same port. To use multi-port, we need to make additional
-        # mapping between ports and nodes.
-        # To keep the design simple, we limit the number of ports to 1 in TA for now.
         if self.nb_link != 1:
             raise ValueError("Traffic aware architecture only supports one link.")
 
@@ -375,7 +291,6 @@ class BaseNetwork:
 
         self.start_monitor()
 
-        # initialize active calendar queue.
         self.activate_calendar_queue()
 
         def evolve():
@@ -391,15 +306,11 @@ class BaseNetwork:
                         prev_circuits=prev_circuits,
                     )
 
-                    # Only re-deploy topology if there is a change
                     if prev_circuits != circuits:
                         prev_circuits = circuits
                         self.pause_calendar_queue()
 
                         assert self.deploy_topo(circuits, start_fresh=True)
-                        # Now we have a static dst to queue mapping, so don't need to re-deploy routing.
-                        # paths = routing_func(self.slice_to_topo)
-                        # self.deploy_routing(paths, routing_mode, arch_mode="TA", start_fresh=True)
                         self.activate_calendar_queue()
 
                 stop_event.wait(timeout=update_interval)
@@ -446,29 +357,19 @@ class BaseNetwork:
             )
 
         if time_slice not in self.slice_to_topo.keys():
-            # To-do: Change to multigraph to support multiple edges between two nodes
-
-            # Fill missing time slices
             for added_time_slice in range(time_slice + 1):
                 if added_time_slice not in self.slice_to_topo.keys():
-                    # Even though ocs connect() provides bi-directional link,
-                    # we use networkx.DiGraph to guarantee the correct node-port mapping,
-                    # otherwise edge_list returns u,v in uncontrolled order.
                     self.slice_to_topo[added_time_slice] = nx.DiGraph()
                     self.slice_to_topo[added_time_slice].add_nodes_from(
                         range(self.nb_node)
                     )
 
         nodes = self.slice_to_topo[time_slice].nodes
-        # Now we assume links are all bidirectional or all unidirectional.
-        # So we only check for one direction.
         if ((port1 not in nodes[node1]) or (nodes[node1][port1] == False)) and (
             (port2 not in nodes[node2]) or (nodes[node2][port2] == False)
         ):
-            # Ports are not occupied
-            nodes[node1][port1] = True  # Keep track of port's occupancy
+            nodes[node1][port1] = True
             nodes[node2][port2] = True
-            # print(f"Time slice {time_slice} Connect node {node1} port {port1} to node {node2} port {port2} ")
 
             self.slice_to_topo[time_slice].add_edge(node1, node2, port1=port1, port2=port2)
             if unidirectional == False:
@@ -500,13 +401,12 @@ class BaseNetwork:
         Returns:
             bool: Whether the disconnection was successful
         """
-        nodes = self.slice_to_topo[time_slice].nodes
-
-
-        if time_slice not in self.slice_to_topo.keys():
+        if time_slice not in self.slice_to_topo:
             print(f"Time slice {time_slice} not found.")
             return False
-        
+
+        nodes = self.slice_to_topo[time_slice].nodes
+
         if self.slice_to_topo[time_slice].has_edge(node1, node2) == False:
             print(
                 f"Time slice {time_slice} does not have edge between node {node1} and node {node2}."
@@ -518,24 +418,20 @@ class BaseNetwork:
                 f"Node {node1} Port {port1} is not the correct port connected to node {node2}."
             )
             return False
-        
+
         if nodes[node2][port2] == False:
             print(
                 f"Node {node2} Port {port2} is not the correct port connected to node {node1}."
             )
             return False
-        
+
         nodes[node1][port1] = False
         nodes[node2][port2] = False
 
-        self.slice_to_topo[time_slice].remove_edge(
-            node1, node2
-        )
+        self.slice_to_topo[time_slice].remove_edge(node1, node2)
 
         if unidirectional == False:
-            self.slice_to_topo[time_slice].remove_edge(
-                node2, node1
-            )
+            self.slice_to_topo[time_slice].remove_edge(node2, node1)
 
         return True
 
@@ -573,10 +469,9 @@ class BaseNetwork:
             self.nodes_created = True
 
         print("Deploying optical topologies...")
-            
-        utils.clear_table(
-            backend=self.backend,
-            switch=self.mininet_net.nameToNode["ocs"],
+
+        self._backend.clear_table(
+            switch_name="ocs",
             table_name="MyIngress.ocs_schedule",
         )
         self.setup_ocs()
@@ -596,7 +491,7 @@ class BaseNetwork:
 
         if time_slice is None:
             return self.slice_to_topo
-        
+
         if time_slice not in self.slice_to_topo.keys():
             print("Time slice not found.")
             return None
@@ -615,11 +510,7 @@ class BaseNetwork:
                 "Now control calendar queue only supports one link per node"
             )
 
-            # Set active queue to node_id, which is never used in TA
-            # print(f"Pause calendar queue for node {node1}")
-            self.device_manager.set_active_queue(
-                f"tor{node1}", node1
-            )  # only node1 because topo is DiGraph
+            self.device_manager.set_active_queue(f"tor{node1}", node1)
 
     def activate_calendar_queue(self):
         """Update active calendar queues based on the current topology, for traffic-aware.
@@ -639,14 +530,13 @@ class BaseNetwork:
                 "Now control calendar queue only supports one link per node"
             )
             self.device_manager.set_active_queue(f"tor{node1}", node2)
-            # self.device_manager.set_active_queue(f"tor{node2}", node1)  # only node1 because topo is DiGraph
 
     ##########################
     #        Routing         #
     ##########################
 
     def add_time_flow_entry(
-        self, node_id, entries: Union[List[TimeFlowEntry],TimeFlowEntry], routing_mode="Per-hop"
+        self, node_id, entries: Union[List[TimeFlowEntry], TimeFlowEntry], routing_mode="Per-hop"
     ) -> bool:
         """
         Add the time flow entry(s) to the node.
@@ -663,7 +553,7 @@ class BaseNetwork:
             entries = [entries]
         elif not isinstance(entries, list):
             raise ValueError("entries must be a TimeFlowEntry or a list of TimeFlowEntry")
-        
+
         commands = ""
         if routing_mode == "Source":
             for entry in entries:
@@ -674,13 +564,11 @@ class BaseNetwork:
         else:
             assert False, "Unsupported routing mode"
 
-        if f"tor{node_id}" not in self.mininet_net.nameToNode.keys():
+        if not self._backend.switch_exists(f"tor{node_id}"):
             print(f"Error: Try deploying paths to non-existent node: node{node_id}.")
             return False
 
-        node = self.mininet_net.nameToNode[f"tor{node_id}"]
-        #print(f"Load to ToR{node_id}:\n {commands}")
-        return utils.load_table(self.backend, node, commands)
+        return self._backend.load_table(f"tor{node_id}", commands)
 
     def deploy_routing(
         self,
@@ -704,19 +592,16 @@ class BaseNetwork:
 
         if start_fresh:
             print("Loading routings...")
+            table_name = (
+                "per_hop_routing" if routing_mode == "Per-hop" else "source_routing"
+            )
             for node_id in range(self.nb_node):
-                switch = self.mininet_net.nameToNode[f"tor{node_id}"]
-                table_name = (
-                    "per_hop_routing" if routing_mode == "Per-hop" else "source_routing"
-                )
-                utils.clear_table(
-                    backend=self.backend, switch=switch, table_name=table_name
+                self._backend.clear_table(
+                    switch_name=f"tor{node_id}",
+                    table_name=table_name,
                 )
 
         entry_dict = utils.path2entries(paths, routing_mode, arch_mode=arch_mode)
-
-        # if len(entry_dict.keys() != self.nb_node):
-        #    print("Warning: Paths are not complete.")
 
         for src, entries in entry_dict.items():
             self.add_time_flow_entry(src, entries, routing_mode=routing_mode)

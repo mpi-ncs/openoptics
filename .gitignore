@@ -7,6 +7,7 @@ graph_slices*.png
 migrations/
 behavioral-model/
 *.pcap
+*core
 
 # uv
 .ruff_cache
@@ -24,3 +25,9 @@ openopticslib
 # Ignore Sphinx build output
 docs/_build/
 docs/generated/
+docs/publish2dev.sh
+docs/publish2mpi.sh
+
+# Claude
+.claude/
+CLAUDE.md

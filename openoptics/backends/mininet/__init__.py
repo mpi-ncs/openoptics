@@ -7,19 +7,3 @@
 #
 # License text: Creative Commons NC BY SA 4.0
 # https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en
-
-"""
-OpenOptics - An open framework for designing, testing, and deploying optical datacenter networks
-"""
-
-__all__ = [
-    "Toolbox",
-    "OpticalRouting",
-    "OpticalTopo",
-    "TimeFlowTable",
-    "DeviceManager",
-    "Dashboard",
-    "OpticalCLI",
-    "utils",
-    "backends",
-]
