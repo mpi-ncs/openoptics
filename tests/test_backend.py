@@ -14,6 +14,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from openoptics.backends.base import BackendBase, SwitchHandle
 
+try:
+    import mininet  # noqa: F401
+    HAS_MININET = True
+except ImportError:
+    HAS_MININET = False
+
 
 # ---------------------------------------------------------------------------
 # Minimal concrete backend used across tests
@@ -152,6 +158,7 @@ class TestAcceptedKwargs(unittest.TestCase):
 # MininetBackend — link bandwidth forwarded to addLink()
 # ---------------------------------------------------------------------------
 
+@unittest.skipUnless(HAS_MININET, "mininet not installed")
 class TestMininetBackendLinkBandwidth(unittest.TestCase):
     """Verify ocs_tor_link_bw and tor_host_link_bw reach Mininet addLink()."""
 

@@ -9,7 +9,6 @@
 # https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en
 
 import networkx as nx
-import matplotlib.pyplot as plt
 import math
 import numpy as np
 import itertools
@@ -344,6 +343,7 @@ def draw_topo(slice_to_topo):
     Returns:
         matplotlib figure object
     """
+    import matplotlib.pyplot as plt
     nb_time_slices = len(slice_to_topo)
     pos = nx.circular_layout(sorted(slice_to_topo[0].nodes))
 

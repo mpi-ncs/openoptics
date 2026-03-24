@@ -8,6 +8,7 @@ if __name__ == "__main__":
         backend="Mininet",
         nb_node=nb_node,
         time_slice_duration_ms=128,  # in ms
+        ocs_tor_link_bw=20,
         use_webserver=True,
     )
     circuits = OpticalTopo.opera(nb_node=nb_node, nb_link=nb_link)

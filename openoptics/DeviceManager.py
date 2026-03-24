@@ -10,11 +10,6 @@
 
 import sys
 
-sys.path.insert(1, "../behavioral-model/targets/tor_switch")
-sys.path.insert(1, "../behavioral-model/tools")
-from tswitch_CLI import TorSwitchAPI
-import runtime_CLI
-
 from openoptics.backends.base import BackendBase
 
 
@@ -24,6 +19,11 @@ class DeviceManager:
     """
 
     def __init__(self, backend: BackendBase, tor_ocs_ports, nb_queue):
+        sys.path.insert(1, "../behavioral-model/targets/tor_switch")
+        sys.path.insert(1, "../behavioral-model/tools")
+        from tswitch_CLI import TorSwitchAPI
+        import runtime_CLI
+
         self.switches = backend.get_tor_switches()
 
         self.switch_clients = {}  # switch name -> thrift client
