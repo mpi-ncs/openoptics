@@ -148,5 +148,60 @@ class TestAcceptedKwargs(unittest.TestCase):
         self.assertIn("link_delay_ms", BackendWithDelay.accepted_kwargs())
 
 
+# ---------------------------------------------------------------------------
+# MininetBackend — link bandwidth forwarded to addLink()
+# ---------------------------------------------------------------------------
+
+class TestMininetBackendLinkBandwidth(unittest.TestCase):
+    """Verify ocs_tor_link_bw and tor_host_link_bw reach Mininet addLink()."""
+
+    def _run_setup(self, ocs_tor_link_bw=1000, tor_host_link_bw=1000):
+        from unittest.mock import MagicMock, patch, call
+        from openoptics.backends.mininet.backend import MininetBackend
+
+        mock_topo = MagicMock()
+        mock_topo.addSwitch.return_value = "switch"
+        mock_topo.addHost.return_value = "host"
+
+        mock_net = MagicMock()
+        mock_net.__iter__ = MagicMock(return_value=iter([]))
+
+        with patch("openoptics.backends.mininet.backend.Topo", return_value=mock_topo), \
+             patch("openoptics.backends.mininet.backend.Mininet", return_value=mock_net), \
+             patch("os.system"):
+            backend = MininetBackend()
+            backend.setup(
+                nb_node=2,
+                nb_host_per_tor=1,
+                nb_link=1,
+                nb_time_slices=1,
+                time_slice_duration_ms=128,
+                guardband_ms=25,
+                tor_host_port=1,
+                host_tor_port=0,
+                tor_ocs_ports=[0],
+                calendar_queue_mode=0,
+                ocs_tor_link_bw=ocs_tor_link_bw,
+                tor_host_link_bw=tor_host_link_bw,
+            )
+
+        return mock_topo.addLink.call_args_list
+
+    def test_ocs_tor_link_bw_passed_to_addlink(self):
+        calls = self._run_setup(ocs_tor_link_bw=5000)
+        ocs_tor_calls = [c for c in calls if c.kwargs.get("bw") == 5000]
+        self.assertTrue(len(ocs_tor_calls) > 0, "Expected addLink call with bw=5000 for OCS-ToR link")
+
+    def test_tor_host_link_bw_passed_to_addlink(self):
+        calls = self._run_setup(tor_host_link_bw=2000)
+        host_tor_calls = [c for c in calls if c.kwargs.get("bw") == 2000]
+        self.assertTrue(len(host_tor_calls) > 0, "Expected addLink call with bw=2000 for host-ToR link")
+
+    def test_default_bw_is_1000_for_both(self):
+        calls = self._run_setup()
+        bw_values = [c.kwargs.get("bw") for c in calls if "bw" in c.kwargs]
+        self.assertTrue(all(v == 1000 for v in bw_values), f"Expected all bw=1000, got {bw_values}")
+
+
 if __name__ == "__main__":
     unittest.main()
