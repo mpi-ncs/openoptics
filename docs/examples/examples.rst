@@ -12,6 +12,7 @@ Examples
    example_src/opera
    example_src/vlb
    example_src/ta
+   example_src/shale
 
 ..
    examples_src/routing_hoho

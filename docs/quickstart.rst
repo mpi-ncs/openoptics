@@ -49,7 +49,7 @@ Option B: With Terminal
    sudo docker exec -it openoptics bash
 
 Install the Project and Initialize the Dashboard
-------------------------
+------------------------------------------------
 
 .. code-block:: bash
 
@@ -62,7 +62,7 @@ Install the Project and Initialize the Dashboard
 You are all set!
 
 Start with an Example Script
---------------------
+----------------------------
 
 Use the following commands to start a round-robin optical DCN with direct path routing:
 

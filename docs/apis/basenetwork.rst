@@ -23,17 +23,3 @@ User APIs
    pause_calendar_queue
    get_topo
 
-..
-   Internal APIs
-   -----------------
-
-   .. autosummary::
-      :toctree: generated/
-
-      create_nodes
-      setup_ocs
-      setup_nodes
-      start_cli
-      start_monitor
-      stop_network
-      cal_node_port_to_ocs_port

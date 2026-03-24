@@ -4,10 +4,8 @@ Utility functions
 .. autosummary::
    :toctree: generated/
 
-   openoptics.utils.clear_table
    openoptics.utils.gen_ocs_commands
    openoptics.utils.gen_tor_commands
-   openoptics.utils.load_table
    openoptics.utils.metric_to_matrix
    openoptics.utils.path2entries
    openoptics.utils.tor_table_arrive_at_dst

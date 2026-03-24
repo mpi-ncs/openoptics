@@ -17,7 +17,7 @@ OpenOptics: Democratizing Optical DCNs
 
 .. note::
 
-   We will hold a tutorial at `SIGCOMM'25 <https://conferences.sigcomm.org/sigcomm/2025/tutorials-hackathons/tutorial-odcn/>`_! Attend to build your own optical DCNs with us!
+   - The OpenOptics `paper <https://ymlei.github.io/assets/OpenOptics_CR.pdf>`_ has been accepted by NSDI'26!
 
 OpenOptics is a general framework for realizing different optical data center network architectures in a plug-and-play manner.
 With OpenOptics, users can deploy customized optical data center networks on the testbed, emulation, or simulation with ~10 lines of Python code.

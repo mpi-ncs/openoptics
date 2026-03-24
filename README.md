@@ -15,7 +15,7 @@ Easy design, testing, and deployment of optical datacenter networks for everyone
 
 *Latest News* 🔥
 
-- [2025/09] We will host [OpenOptics Tutorial](https://conferences.sigcomm.org/sigcomm/2025/tutorials-hackathons/tutorial-odcn/) at SIGCOMM'25 on September 8th! See you at Coimbra!
+- [2026/03] [OpenOptics](https://ymlei.github.io/assets/OpenOptics_CR.pdf) has been accepted by NSDI'26!
 
 ---
 
