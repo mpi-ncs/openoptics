@@ -1,19 +1,15 @@
+# This file is superseded by test_toolbox.py which provides proper unit tests
+# for BaseNetwork.connect() and BaseNetwork.disconnect().
+# Kept to avoid breaking any external references.
+
 import os
 import sys
+import unittest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from openoptics import Toolbox
+from test_toolbox import *  # noqa: F401, F403
 
 if __name__ == "__main__":
-    root = ""
-    net = Toolbox.BaseNetwork(
-        name="my_network", backend="Mininet", nb_node=2, nb_link=4, use_webserver=True
-    )
-
-    assert net.connect(0, 0, 1, 0, 0) == True
-    assert net.connect(0, 0, 1, 1, 1) == True
-    assert net.connect(0, 0, 1, 0, 2) == False
-    assert net.connect(0, 0, 1, 2, 3) == True
-
-    # net.start(mode="Mininet")
+    unittest.main()
