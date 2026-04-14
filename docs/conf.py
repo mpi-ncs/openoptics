@@ -27,6 +27,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosectionlabel",
     "myst_parser",  # md
+    # NOTE: myst_heading_anchors is set below
 ]
 
 autosummary_generate = True
@@ -40,7 +41,7 @@ autodoc_default_options = {
 }
 
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "tofino-backend-internals.md"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -97,6 +98,11 @@ autodoc_mock_imports = [
     "mininet",
 ]
 
-exclude_patterns = [
+exclude_patterns += [
+    "tofino-backend-internals.md",
     #"tutorials/*",
 ]
+
+# Auto-generate anchors for Markdown headings (h1-h3) so intra-page
+# `[text](#heading-slug)` links resolve under MyST.
+myst_heading_anchors = 3

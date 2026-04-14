@@ -9,7 +9,7 @@ The configuration workflow is nearly identical to the previous examples of traff
 
 Try ping between nodes, what do you observe on the dashboard?
 
-.. literalinclude:: ../../../examples/ta.py
+.. literalinclude:: ../../../examples/mininet_ta.py
    :language: python
    :linenos:
-   :caption: examples/ta.py
+   :caption: examples/mininet_ta.py

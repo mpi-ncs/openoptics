@@ -7,10 +7,10 @@ In vanilla VLB, packets are first routed to an intermediate node selected random
 and then forwarded to the final destination node through a direct connection.
 You can use the :py:meth:`openoptics.OpticalRouting.routing_vlb` function to configure VLB routing.
 
-.. literalinclude:: ../../../examples/routing_vlb.py
+.. literalinclude:: ../../../examples/mininet_routing_vlb.py
    :language: python
    :linenos:
-   :caption: examples/routing_vlb.py
+   :caption: examples/mininet_routing_vlb.py
 
 .. [1] `Universal schemes for parallel communication <https://dl.acm.org/doi/abs/10.1145/800076.802479>`_, STOC'81
 .. [2] `RotorNet: A Scalable, Low-complexity, Optical Datacenter Network <https://dl.acm.org/doi/abs/10.1145/3098822.3098838>`_, SIGCOMM'17

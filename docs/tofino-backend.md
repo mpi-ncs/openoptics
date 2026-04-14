@@ -31,8 +31,9 @@ logical ToRs, one per pipe. The OCS is emulated on a separate Tofino2.
 | Per-hop and source routing (≤ 2 hops) | ✅ |
 | Routing algorithms: Direct, VLB, HoHo, Opera | ✅ |
 | Built-in CLI: `server_check`, `server_ping`, `h0 ping h1` | ✅ |
+| Dashboard for collecting testbed telemetry (queue depth, drops, per-slice stats) | 🚧 TODO |
 
-Examples in [`examples/`](../examples/): `tofino_4node_1link_direct.py`,
+Examples live under `examples/`: `tofino_4node_1link_direct.py`,
 `tofino_4node_1link_hoho.py`, `tofino_4node_1link_hoho_source.py`,
 `tofino_4node_1link_vlb_source.py`, `tofino_4node_2link_direct.py`,
 `tofino_4node_2link_hoho.py`, `tofino_4node_2link_vlb_source.py`.
@@ -111,12 +112,32 @@ processes (`pkill -9`).
 ### 2.3 Config file
 
 The backend reads a TOML config passed via `config_file=`. Two committed
-templates in [`openoptics/backends/tofino/`](../openoptics/backends/tofino/)
-cover the common shapes:
+templates in `openoptics/backends/tofino/` cover the common shapes:
 
 - `config_4tor.toml` — one physical Tofino2 hosting 4 logical ToRs, 1 uplink
   each.
+
+  ```
+  tor-switch-1 (Tofino2, one pipe per logical ToR)        ocs-switch (Tofino2)
+  ┌──────────────────────────────────────────────┐        ┌──────────────┐
+  │ server1 ── 1/0  ┌─ ToR0 (pipe 1) ──  7/0 ────┼────────┼─ 7/0         │
+  │ server2 ── 9/0  ├─ ToR1 (pipe 2) ── 15/0 ────┼────────┼─ 15/0        │
+  │                 ├─ ToR2 (pipe 3) ── 23/0 ────┼────────┼─ 23/0        │
+  │                 └─ ToR3 (pipe 0) ── 31/0 ────┼────────┼─ 31/0        │
+  └──────────────────────────────────────────────┘        └──────────────┘
+  ```
+
 - `config_4tor_2link.toml` — same, with 2 uplinks per ToR.
+
+  ```
+  tor-switch-1 (Tofino2)                                  ocs-switch (Tofino2)
+  ┌──────────────────────────────────────────────┐        ┌──────────────┐
+  │ server1 ── 1/0  ┌─ ToR0 ──  7/0, 8/0 ────────┼────────┼─ 7/0,  8/0   │
+  │ server2 ── 9/0  ├─ ToR1 ── 15/0, 16/0 ───────┼────────┼─ 15/0, 16/0  │
+  │                 ├─ ToR2 ── 23/0, 24/0 ───────┼────────┼─ 23/0, 24/0  │
+  │                 └─ ToR3 ── 31/0, 32/0 ───────┼────────┼─ 31/0, 32/0  │
+  └──────────────────────────────────────────────┘        └──────────────┘
+  ```
 
 Both ship with **placeholder** hostnames, IPs, and MACs so they are safe to
 keep in a public repository. To deploy against a real testbed, supply the
@@ -273,14 +294,3 @@ user = "p4"
   `(port, slice)`.
 - **Source routing** — an `optics_sr` header carries a hop list (≤ 2 hops).
   Each hop is consumed at the relevant ToR.
-
-### 3.3 Key files
-
-| Layer | File |
-|---|---|
-| Python backend | [`openoptics/backends/tofino/backend.py`](../openoptics/backends/tofino/backend.py) |
-| Deployment orchestrator | [`openoptics/backends/tofino/deploy.py`](../openoptics/backends/tofino/deploy.py) |
-| OCS P4 + setup | [`openoptics/backends/tofino/emulated-ocs/`](../openoptics/backends/tofino/emulated-ocs/) |
-| ToR P4 + setup | [`openoptics/backends/tofino/openoptics-tor/`](../openoptics/backends/tofino/openoptics-tor/) |
-| Configs | `config_4tor.toml`, `config_4tor_2link.toml`, `config_2tor_2link.toml` |
-
