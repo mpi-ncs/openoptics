@@ -38,7 +38,8 @@ class BaseNetwork:
         nb_link=1,
         nb_host_per_tor=1,
         backend="Mininet",
-        time_slice_duration_ms=128,
+        time_slice_duration_us=None,
+        time_slice_duration_ms=None,
         guardband_ms=25,
         arch_mode="TO",  # TO for traffic-oblivious, TA for traffic-aware
         use_webserver=True,
@@ -55,7 +56,9 @@ class BaseNetwork:
             nb_node (int): Number of nodes in the network
             nb_link (int, optional): Number of links per node (defaults to 1)
             nb_host_per_tor (int, optional): Number of hosts per ToR (defaults to 1)
-            time_slice_duration_ms (int, optional): Duration of each time slice in milliseconds (defaults to 128)
+            time_slice_duration_us (int, optional): Duration of each time slice in microseconds
+            time_slice_duration_ms (int, optional): Duration of each time slice in milliseconds
+                Exactly one of time_slice_duration_us or time_slice_duration_ms must be provided.
             guardband_ms (int, optional): Guard band in milliseconds (defaults to 25)
             arch_mode (str, optional): architecture mode: "TO" or "TA" (defaults to "TO")
             use_webserver (bool, optional): Whether to use web server for dashboard (defaults to True)
@@ -73,7 +76,17 @@ class BaseNetwork:
 
         self.name = name
         self.nb_time_slices = 1
-        self.time_slice_duration_ms = time_slice_duration_ms
+
+        # Accept either us or ms; store internally as microseconds
+        if time_slice_duration_us is not None and time_slice_duration_ms is not None:
+            raise ValueError("Specify only one of time_slice_duration_us or time_slice_duration_ms.")
+        if time_slice_duration_us is not None:
+            self.time_slice_duration_us = int(time_slice_duration_us)
+        elif time_slice_duration_ms is not None:
+            self.time_slice_duration_us = int(time_slice_duration_ms * 1000)
+        else:
+            self.time_slice_duration_us = 128_000  # default: 128 ms
+
         self.guardband_ms = guardband_ms
         self.arch_mode = arch_mode
         self.calendar_queue_mode = 0 if arch_mode == "TO" else 1
@@ -87,6 +100,9 @@ class BaseNetwork:
         self.use_webserver = use_webserver
         self.ocs_tor_link_bw = ocs_tor_link_bw
         self.tor_host_link_bw = tor_host_link_bw
+
+        # Backward-compat alias
+        self.time_slice_duration_ms = self.time_slice_duration_us / 1000
 
         self._backend = create_backend(backend)
 
@@ -118,13 +134,16 @@ class BaseNetwork:
         if use_webserver is enabled. The dashboard is accessible at
         http://localhost:8001.
         """
-        self.device_manager = DeviceManager(
-            self._backend,
-            self.tor_ocs_ports,
-            nb_queue=self.nb_time_slices if self.arch_mode == "TO" else self.nb_node,
-        )
+        if self._backend.supports_device_manager:
+            self.device_manager = DeviceManager(
+                self._backend,
+                self.tor_ocs_ports,
+                nb_queue=self.nb_time_slices if self.arch_mode == "TO" else self.nb_node,
+            )
+        else:
+            self.device_manager = None
 
-        if self.use_webserver:
+        if self.use_webserver and self.device_manager is not None:
             from openoptics.Dashboard import Dashboard
             # Ensure Redis is running and DB migrations are applied
             os.system("service redis-server start > /dev/null 2>&1")
@@ -168,7 +187,7 @@ class BaseNetwork:
 
         Stops the dashboard (if running) and the backend network.
         """
-        if self.use_webserver:
+        if self.use_webserver and hasattr(self, 'dashboard'):
             self.dashboard.stop()
         self._backend.stop()
 
@@ -179,7 +198,7 @@ class BaseNetwork:
             nb_host_per_tor=self.nb_host_per_tor,
             nb_link=self.nb_link,
             nb_time_slices=self.nb_time_slices,
-            time_slice_duration_ms=self.time_slice_duration_ms,
+            time_slice_duration_us=self.time_slice_duration_us,
             guardband_ms=self.guardband_ms,
             tor_host_port=self.tor_host_port,
             host_tor_port=self.host_tor_port,
@@ -189,7 +208,6 @@ class BaseNetwork:
             tor_host_link_bw=self.tor_host_link_bw,
             **self._backend_kwargs,
         )
-        self.setup_nodes()
 
     def cal_node_port_to_ocs_port(self, node_id, port_id):
         """
@@ -219,11 +237,11 @@ class BaseNetwork:
                 ocs_port2 = self.cal_node_port_to_ocs_port(node2, port2)
                 ocs_slice_port1_port2.append((ts, ocs_port1, ocs_port2))
 
-        ocs_commands = utils.gen_ocs_commands(ocs_slice_port1_port2)
+        ocs_entries = utils.gen_ocs_commands(ocs_slice_port1_port2)
 
         self._backend.load_table(
             switch_name="ocs",
-            table_commands=ocs_commands,
+            entries=ocs_entries,
             print_flag=False,
         )
 
@@ -237,7 +255,7 @@ class BaseNetwork:
         print("Setting up switch tables...")
 
         ip_to_tor = self._backend.get_ip_to_tor()
-        ip_to_dst_commands = utils.tor_table_ip_to_dst(ip_to_tor)
+        ip_to_dst_entries = utils.tor_table_ip_to_dst(ip_to_tor)
 
         for tor_id in range(self.nb_node):
             arrive_at_dst = utils.tor_table_arrive_at_dst(tor_id, self.tor_host_port)
@@ -248,7 +266,7 @@ class BaseNetwork:
 
             self._backend.load_table(
                 switch_name=f"tor{tor_id}",
-                table_commands=ip_to_dst_commands
+                entries=ip_to_dst_entries
                 + arrive_at_dst
                 + verify_desired_node
                 + cal_port_enqueue,
@@ -452,10 +470,21 @@ class BaseNetwork:
         if start_fresh:
             self.slice_to_topo = {}
 
+        nb_time_slices_hint = 0
         for time_slice, node1, node2, port1, port2 in circuits:
+            nb_time_slices_hint = max(nb_time_slices_hint, time_slice + 1)
+            if node1 == -1 or node2 == -1:
+                # Placeholder for an empty time slice (e.g. guardband with no circuits)
+                continue
             if not self.connect(time_slice, node1, node2, port1, port2):
                 print("Topology deployment failed.")
                 return False
+
+        # Create empty DiGraphs for any time slices not yet populated
+        for ts in range(nb_time_slices_hint):
+            if ts not in self.slice_to_topo:
+                self.slice_to_topo[ts] = nx.DiGraph()
+                self.slice_to_topo[ts].add_nodes_from(range(self.nb_node))
 
         self.nb_time_slices = len(self.slice_to_topo.keys())
         if self.nb_time_slices == 0:
@@ -472,9 +501,12 @@ class BaseNetwork:
 
         self._backend.clear_table(
             switch_name="ocs",
-            table_name="MyIngress.ocs_schedule",
+            table="ocs_schedule",
         )
         self.setup_ocs()
+
+        if hasattr(self._backend, 'gen_schedule'):
+            self._backend.gen_schedule(self.slice_to_topo)
 
         return True
 
@@ -554,13 +586,13 @@ class BaseNetwork:
         elif not isinstance(entries, list):
             raise ValueError("entries must be a TimeFlowEntry or a list of TimeFlowEntry")
 
-        commands = ""
+        table_entries = []
         if routing_mode == "Source":
             for entry in entries:
-                commands += utils.tor_table_routing_source(entry, nb_time_slices=self.nb_time_slices)
+                table_entries += utils.tor_table_routing_source(entry, nb_time_slices=self.nb_time_slices)
         elif routing_mode == "Per-hop":
             for entry in entries:
-                commands += utils.tor_table_routing_per_hop(entry, nb_time_slices=self.nb_time_slices)
+                table_entries += utils.tor_table_routing_per_hop(entry, nb_time_slices=self.nb_time_slices)
         else:
             assert False, "Unsupported routing mode"
 
@@ -568,7 +600,7 @@ class BaseNetwork:
             print(f"Error: Try deploying paths to non-existent node: node{node_id}.")
             return False
 
-        return self._backend.load_table(f"tor{node_id}", commands)
+        return self._backend.load_table(f"tor{node_id}", table_entries)
 
     def deploy_routing(
         self,
@@ -590,15 +622,18 @@ class BaseNetwork:
             bool: True if routing deployment is successful
         """
 
+        # Load utility tables into ToR switches (ip_to_dst, arrive_at_dst, etc.)
+        self.setup_nodes()
+
         if start_fresh:
             print("Loading routings...")
             table_name = (
-                "per_hop_routing" if routing_mode == "Per-hop" else "source_routing"
+                "per_hop_routing" if routing_mode == "Per-hop" else "add_source_routing_entries"
             )
             for node_id in range(self.nb_node):
                 self._backend.clear_table(
                     switch_name=f"tor{node_id}",
-                    table_name=table_name,
+                    table=table_name,
                 )
 
         entry_dict = utils.path2entries(paths, routing_mode, arch_mode=arch_mode)

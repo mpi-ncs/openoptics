@@ -31,15 +31,15 @@ class FakeBackend(BackendBase):
         self._switches["ocs"] = SwitchHandle("ocs", 9090)
 
         # Call records for assertions
-        self.loaded: list = []   # [(switch_name, table_commands), ...]
-        self.cleared: list = []  # [(switch_name, table_name), ...]
+        self.loaded: list = []   # [(switch_name, entries), ...] where entries is list[TableEntry]
+        self.cleared: list = []  # [(switch_name, table), ...]
         self.setup_called = False
         self.stop_called = False
 
     # --- BackendBase abstract methods ---
 
     def setup(self, *, nb_node, nb_host_per_tor, nb_link, nb_time_slices,
-              time_slice_duration_ms, guardband_ms,
+              time_slice_duration_us, guardband_ms,
               tor_host_port, host_tor_port, tor_ocs_ports,
               calendar_queue_mode, **backend_kwargs) -> None:
         self.setup_called = True
@@ -56,12 +56,12 @@ class FakeBackend(BackendBase):
     def get_ip_to_tor(self) -> dict:
         return dict(self._ip_to_tor)
 
-    def load_table(self, switch_name, table_commands, **kwargs) -> bool:
-        self.loaded.append((switch_name, table_commands))
+    def load_table(self, switch_name, entries, **kwargs) -> bool:
+        self.loaded.append((switch_name, entries))
         return True
 
-    def clear_table(self, switch_name, table_name, **kwargs) -> None:
-        self.cleared.append((switch_name, table_name))
+    def clear_table(self, switch_name, table, **kwargs) -> None:
+        self.cleared.append((switch_name, table))
 
     def stop(self) -> None:
         self.stop_called = True

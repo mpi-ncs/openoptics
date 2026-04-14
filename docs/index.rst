@@ -41,8 +41,9 @@ After deployment, users can monitor the network with OpenOptics Dashboard.
 .. image:: ../assets/dashboard.png
    :alt: OpenOptics Dashboard
 
-We have now published the Mininet backend, where users can realize optical DCNs in a full software emulation using BMv2 software switches and Mininet networks.
-The Tofino-based backend will be released soon.
+OpenOptics ships with two backends: a Mininet backend that runs optical DCNs
+as full software emulations on BMv2 switches, and a Tofino backend that
+deploys the same Python code onto real Tofino2 hardware.
 
 .. toctree::
    :maxdepth: 1
@@ -51,6 +52,7 @@ The Tofino-based backend will be released soon.
    installation
    examples/examples
    tutorials/tutorial_index
+   tofino-backend
    apis_index
    about
 

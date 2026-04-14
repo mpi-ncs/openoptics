@@ -29,7 +29,7 @@ class _ConcreteBackend(BackendBase):
     """Minimal implementation to verify the interface."""
 
     def setup(self, *, nb_node, nb_host_per_tor, nb_link, nb_time_slices,
-              time_slice_duration_ms, guardband_ms,
+              time_slice_duration_us, guardband_ms,
               tor_host_port, host_tor_port, tor_ocs_ports,
               calendar_queue_mode, **backend_kwargs):
         pass
@@ -103,7 +103,7 @@ class TestBackendBaseAbstract(unittest.TestCase):
         """A subclass that skips an abstract method must not instantiate."""
         class IncompleteBackend(BackendBase):
             def setup(self, *, nb_node, nb_host_per_tor, nb_link, nb_time_slices,
-                      time_slice_duration_ms, guardband_ms,
+                      time_slice_duration_us, guardband_ms,
                       tor_host_port, host_tor_port, tor_ocs_ports,
                       calendar_queue_mode, **backend_kwargs): pass
             def get_switch(self, name): pass
@@ -182,7 +182,7 @@ class TestMininetBackendLinkBandwidth(unittest.TestCase):
                 nb_host_per_tor=1,
                 nb_link=1,
                 nb_time_slices=1,
-                time_slice_duration_ms=128,
+                time_slice_duration_us=128_000,
                 guardband_ms=25,
                 tor_host_port=1,
                 host_tor_port=0,

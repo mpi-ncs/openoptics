@@ -13,6 +13,7 @@ import networkx as nx
 
 from openoptics.TimeFlowTable import TimeFlowEntry, TimeFlowHop, Path
 from openoptics.OpticalRouting import find_direct_path
+from openoptics.backends.base import TableEntry
 
 
 def path2entries(
@@ -68,94 +69,121 @@ def path2entries(
 
 
 
-def gen_ocs_commands(ocs_schedule_entries):
+def gen_ocs_commands(ocs_schedule_entries) -> List[TableEntry]:
     """
-    Generate CLI commands for OCS (Optical Circuit Switching) scheduling
+    Generate table entries for OCS (Optical Circuit Switching) scheduling.
 
     Args:
         ocs_schedule_entries: List of tuples (slice_id, ingress_port, egress_port)
 
     Returns:
-        str: CLI commands for OCS scheduling
+        List of TableEntry objects for the OCS switch.
     """
-    # timestamp to time slice
-    commands = ""
-
-    # ocs forwarding
-    commands += "table_set_default ocs_schedule drop\n"
+    entries = [
+        TableEntry(
+            table="ocs_schedule",
+            action="drop",
+            match_keys={},
+            action_params={},
+            is_default_action=True,
+        )
+    ]
     for slice_id, ingress_port, egress_port in ocs_schedule_entries:
-        commands += f"table_add ocs_schedule ocs_forward {ingress_port} {slice_id} => {egress_port}\n"
-        # One direction of link has one entry, so we don't need to add both direction entries here.
-        # commands += f"table_add ocs_schedule ocs_forward {egress_port} {slice_id} => {ingress_port}\n"
-    return commands
+        entries.append(TableEntry(
+            table="ocs_schedule",
+            action="ocs_forward",
+            match_keys={"ingress_port": ingress_port, "slice_id": slice_id},
+            action_params={"egress_port": egress_port},
+        ))
+    return entries
 
 
-def tor_table_ip_to_dst(ip_to_tor):
+def tor_table_ip_to_dst(ip_to_tor) -> List[TableEntry]:
     """
-    Generate table entries mapping IP addresses to ToR (Top of Rack) switch IDs
+    Generate table entries mapping IP addresses to ToR (Top of Rack) switch IDs.
 
     Args:
         ip_to_tor: Dictionary mapping IP addresses to ToR switch IDs
 
     Returns:
-        str: CLI commands for IP to ToR mapping
+        List of TableEntry objects.
     """
-    commands = ""
-    for ip, tor_id in ip_to_tor.items():
-        commands += f"table_add ip_to_dst_node write_dst {ip} => {tor_id}\n"
+    return [
+        TableEntry(
+            table="ip_to_dst_node",
+            action="write_dst",
+            match_keys={"ip": ip},
+            action_params={"dst_node": tor_id},
+        )
+        for ip, tor_id in ip_to_tor.items()
+    ]
 
-    return commands
 
-
-def tor_table_arrive_at_dst(tor_id, to_host_port) -> str:
+def tor_table_arrive_at_dst(tor_id, to_host_port) -> List[TableEntry]:
     """
-    Generate table entries for check if the packet arrives at the dst ToR. If so, send pkt to host
+    Generate table entries for checking if a packet arrives at the dst ToR.
+    If so, send it to the host.
 
     Args:
         tor_id: ID of the ToR switch
         to_host_port: Port number connected to host
 
     Returns:
-        A string of commands
+        List of TableEntry objects.
     """
+    return [
+        TableEntry(
+            table="arrive_at_dst",
+            action="send_to_host",
+            match_keys={"tor_id": tor_id},
+            action_params={"host_port": to_host_port},
+        )
+    ]
 
-    return f"table_add arrive_at_dst send_to_host {tor_id} => {to_host_port}\n"
 
-
-def tor_table_verify_desired_node(tor_id) -> str:
+def tor_table_verify_desired_node(tor_id) -> List[TableEntry]:
     """
-    Generate table entries for checking if the receiver is the dst node, send pkt to host
+    Generate table entries for checking if the receiver is the dst node.
 
     Args:
         tor_id: ID of the ToR switch
 
     Returns:
-        A string of commands
+        List of TableEntry objects (two entries: one for tor_id, one wildcard 255).
     """
-    return (
-        f"table_add verify_desired_node NoAction {tor_id} => \n"
-        + "table_add verify_desired_node NoAction 255 => \n"
-    )
+    return [
+        TableEntry(
+            table="verify_desired_node",
+            action="NoAction",
+            match_keys={"tor_id": tor_id},
+            action_params={},
+        ),
+        TableEntry(
+            table="verify_desired_node",
+            action="NoAction",
+            match_keys={"tor_id": 255},
+            action_params={},
+        ),
+    ]
 
 
 def tor_table_cal_port_slice_to_node(
     tor_id: int, slice_to_topo: Dict[int, nx.Graph]
-) -> str:
+) -> List[TableEntry]:
     """
-    Generate table entries for (src, next_node, send_slice)->send_port
+    Generate table entries for (src, next_node, send_slice)->send_port.
 
     Args:
         tor_id: ID of the ToR switch
         slice_to_topo: Dictionary mapping time slices to network topology graphs
 
     Returns:
-        A string of commands
+        List of TableEntry objects.
     """
-    commands = ""
+    result = []
 
     if 0 not in slice_to_topo.keys():
-        # topology is empty
-        return "\n"
+        return result
 
     for dst in slice_to_topo[0].nodes():
         if tor_id == dst:
@@ -171,73 +199,106 @@ def tor_table_cal_port_slice_to_node(
             arrival_ts = entry.arrival_ts
             send_ts = entry.hops[0].send_ts
             send_port = entry.hops[0].send_port_or_node
-            commands += f"table_add cal_port_slice_to_node to_calendar_q_table_action {dst} {arrival_ts} => {send_port} {send_ts}\n"
+            result.append(TableEntry(
+                table="cal_port_slice_to_node",
+                action="to_calendar_q_table_action",
+                match_keys={"dst": dst, "arrival_ts": arrival_ts},
+                action_params={"send_port": send_port, "send_ts": send_ts},
+            ))
 
-    return commands
+    return result
 
 
-def tor_table_routing_source(entry: TimeFlowEntry, nb_time_slices=None):
+def tor_table_routing_source(entry: TimeFlowEntry, nb_time_slices=None) -> List[TableEntry]:
     """
-    Generate table entries for source routing
+    Generate table entries for source routing.
 
     Args:
         entry: TimeFlowEntry object containing routing information
-        nb_time_slices: Number of time slices. For generating entries for all time slices with wildcard arrival time slice.
+        nb_time_slices: Number of time slices. Required when arrival_ts is None
+            (wildcard), to generate one entry per time slice.
 
     Returns:
-        str: CLI commands for source routing entries
+        List of TableEntry objects.
+        action_params["hops"] is a list of (cur_node, send_ts, send_port) tuples.
     """
     hop_count = len(entry.hops)
+    action = f"write_ssrr_header_{hop_count - 1}"
 
     if entry.arrival_ts is None:
-        return "".join([
-            f"table_add add_source_routing_entries write_ssrr_header_{hop_count - 1} "
-            f"{entry.dst} {arrival_ts} => "
-            f"{' '.join(f'{hop.cur_node} {arrival_ts} {hop.send_port_or_node}' for hop in entry.hops)} \n"
+        return [
+            TableEntry(
+                table="add_source_routing_entries",
+                action=action,
+                match_keys={"dst": entry.dst, "arrival_ts": arrival_ts},
+                action_params={"hops": [
+                    (hop.cur_node, arrival_ts, hop.send_port_or_node)
+                    for hop in entry.hops
+                ]},
+            )
             for arrival_ts in range(nb_time_slices)
-        ])
-    
+        ]
     else:
-        return (
-            f"table_add add_source_routing_entries write_ssrr_header_{hop_count - 1} "
-            f"{entry.dst} {entry.arrival_ts} => "
-            f"{' '.join(f'{hop.cur_node} {hop.send_ts} {hop.send_port_or_node}' for hop in entry.hops)} \n"
-        )
+        return [
+            TableEntry(
+                table="add_source_routing_entries",
+                action=action,
+                match_keys={"dst": entry.dst, "arrival_ts": entry.arrival_ts},
+                action_params={"hops": [
+                    (hop.cur_node, hop.send_ts, hop.send_port_or_node)
+                    for hop in entry.hops
+                ]},
+            )
+        ]
 
 
-def tor_table_routing_per_hop(entry: TimeFlowEntry, nb_time_slices=None):
+def tor_table_routing_per_hop(entry: TimeFlowEntry, nb_time_slices=None) -> List[TableEntry]:
     """
-    Generate table entries for per-hop routing
+    Generate table entries for per-hop routing.
 
     Args:
         entry: TimeFlowEntry object containing routing information
-        nb_time_slices: Number of time slices. For generating entries for all time slices with wildcard arrival time slice.
+        nb_time_slices: Number of time slices. Required when arrival_ts is None
+            (wildcard), to generate one entry per time slice.
 
     Returns:
-        str: CLI commands for per-hop routing entries
+        List of TableEntry objects.
     """
-
     if len(entry.hops) != 1:
         print(
             f"Warning: Find multi-hop time flow entry ({entry}) in Per-hop forwarding mode. Trim following hops."
         )
     hop = entry.hops[0]
-    
+
     if entry.arrival_ts is None:
-        # Flow table with wildcard arrival time slice
-        return "".join([
-            f"table_add per_hop_routing write_time_flow_entry "
-            f"{entry.dst} {arrival_ts} => "
-            f"{hop.cur_node} {arrival_ts} {hop.send_port_or_node}\n"
+        # Wildcard arrival_ts: generate one entry per time slice.
+        # Both match key and send_ts action param use the same loop variable.
+        return [
+            TableEntry(
+                table="per_hop_routing",
+                action="write_time_flow_entry",
+                match_keys={"dst": entry.dst, "arrival_ts": arrival_ts},
+                action_params={
+                    "cur_node": hop.cur_node,
+                    "send_ts": arrival_ts,
+                    "send_port": hop.send_port_or_node,
+                },
+            )
             for arrival_ts in range(nb_time_slices)
-        ])
+        ]
     else:
-        # Regular time flow table
-        return (
-            f"table_add per_hop_routing write_time_flow_entry "
-            f"{entry.dst} {entry.arrival_ts} => "
-            f"{hop.cur_node} {hop.send_ts} {hop.send_port_or_node}\n"
-        )
+        return [
+            TableEntry(
+                table="per_hop_routing",
+                action="write_time_flow_entry",
+                match_keys={"dst": entry.dst, "arrival_ts": entry.arrival_ts},
+                action_params={
+                    "cur_node": hop.cur_node,
+                    "send_ts": hop.send_ts,
+                    "send_port": hop.send_port_or_node,
+                },
+            )
+        ]
 
 
 def gen_tor_commands(tor_id, slices, port_to_ip, num_hosts, offset):

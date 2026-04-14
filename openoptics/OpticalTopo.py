@@ -55,8 +55,8 @@ def static_topo(nb_node, nb_link=1):
     return circuits
 
 
-def round_robin(nb_node=None, nodes=None, port1=0, port2=0, 
-                start_time_slice = 0, self_loop=False) -> list:
+def round_robin(nb_node=None, nodes=None, port1=0, port2=0,
+                start_time_slice = 0, self_loop=False, guardband=False) -> list:
     """
     Create a round-robin topology with the circle method. Assume one upper link per node.
 
@@ -68,6 +68,7 @@ def round_robin(nb_node=None, nodes=None, port1=0, port2=0,
         port2: The port dst node uses to connect. 0 by default
         start_time_slice: The time slice to start the topology schedule. 0 by default.
         self_loop: Whether to add loop-back time slice. Used for building complex topology.
+        guardband: Insert guardband time slices where ports change connection.
 
     Returns:
         A list of circuits.
@@ -102,10 +103,13 @@ def round_robin(nb_node=None, nodes=None, port1=0, port2=0,
         for node_id in range(nb_node):
             circuits.append([start_time_slice + nb_node - 1, nodes[node_id], nodes[node_id], port1, port2])
 
+    if guardband:
+        circuits = add_guardband(circuits)
+
     return circuits
 
 
-def opera(nb_node, nb_link, nodes=None, disable_last_ts=False):
+def opera(nb_node, nb_link, nodes=None, disable_last_ts=False, guardband=False):
     """
     Opera topology support multiple upper links per node.
     In (nb_node / nb_link) time slices, each link of every node connects (nb_node / nb_link) number of nodes
@@ -115,6 +119,8 @@ def opera(nb_node, nb_link, nodes=None, disable_last_ts=False):
         nb_node: Number of nodes
         nb_link: Number of links per node
         nodes: List of nodes (optional)
+        disable_last_ts: Remove the last active time slice per port
+        guardband: Insert guardband time slices where ports change connection.
 
     Returns:
         List of circuits for the opera topology
@@ -146,10 +152,13 @@ def opera(nb_node, nb_link, nodes=None, disable_last_ts=False):
     offset_circuits = port_offset(merged_circuit, disable_last_ts)
     # offset_circuits = merged_circuit
 
+    if guardband:
+        offset_circuits = add_guardband(offset_circuits)
+
     return offset_circuits
 
 
-def shale(nb_node, h, nodes=None):
+def shale(nb_node, h, nodes=None, guardband=False):
     """
     Create a Shale topology.
     We assume num of links == h, so rr in different dimension doesn't influence each other.
@@ -158,6 +167,7 @@ def shale(nb_node, h, nodes=None):
         nb_node: Number of nodes
         h: Number of dimensions
         nodes: List of nodes (optional)
+        guardband: Insert guardband time slices where ports change connection.
 
     Returns:
         List of circuits for the shale topology
@@ -180,6 +190,9 @@ def shale(nb_node, h, nodes=None):
             indices = base_indices[:pos] + (slice(None),) + base_indices[pos:]
             # indices are (:,0,0), (:,0,1), (:,1,0), (:,1,1), (0,:,0), (0,:,1), (1,:,0)....
             circuits.extend(round_robin(nodes=nodes[indices], port1=pos, port2=pos))
+
+    if guardband:
+        circuits = add_guardband(circuits)
 
     return circuits
 
@@ -229,6 +242,124 @@ def bipartite_matching(
 
     # print(f"new circuits: {circuits}")
     return circuits
+
+
+def from_schedule(schedule_file, nb_node, nb_link):
+    """
+    Load a schedule matrix from a text file and convert it to circuits.
+
+    The schedule is a (nb_time_slices x nb_node*nb_link) matrix where
+    schedule[slice][tor*nb_link + port] = destination_tor (-1 if no connection).
+
+    Args:
+        schedule_file: Path to the schedule text file (tab/space-separated integers).
+        nb_node: Number of ToR nodes.
+        nb_link: Number of uplink ports per node.
+
+    Returns:
+        List of circuits [time_slice, node1, node2, port1, port2].
+    """
+    schedule = np.loadtxt(schedule_file, dtype=int)
+    nb_time_slices = schedule.shape[0]
+
+    circuits = []
+    seen = set()
+
+    for ts in range(nb_time_slices):
+        for src in range(nb_node):
+            for port in range(nb_link):
+                dst = int(schedule[ts, src * nb_link + port])
+                if dst == -1:
+                    continue
+                if dst == src:
+                    # Self-loop: use (ts, node, port) as key to avoid duplicates
+                    edge_key = (ts, src, port, "self")
+                    if edge_key not in seen:
+                        seen.add(edge_key)
+                        circuits.append([ts, src, src, port, port])
+                    continue
+                # Avoid adding the same bidirectional edge twice
+                edge_key = (ts, min(src, dst), max(src, dst), port)
+                if edge_key in seen:
+                    continue
+                # Find dst's port that connects back to src
+                dst_port = -1
+                for p in range(nb_link):
+                    if int(schedule[ts, dst * nb_link + p]) == src:
+                        dst_port = p
+                        break
+                if dst_port == -1:
+                    continue
+                seen.add(edge_key)
+                seen.add((ts, min(src, dst), max(src, dst), dst_port))
+                circuits.append([ts, src, dst, port, dst_port])
+
+    return circuits
+
+
+def add_guardband(circuits):
+    """
+    Insert guardband time slices into a circuit list.
+
+    Whenever one or more ports change their connection between consecutive
+    time slices, a guardband slice is inserted where the affected ports have
+    no circuit.  Ports that do not change keep their connection from the
+    preceding active slice.  The last-to-first slice transition is also
+    considered (wrap-around).
+
+    Args:
+        circuits: List of circuits [time_slice, node1, node2, port1, port2]
+
+    Returns:
+        New list of circuits with guardband slices inserted.
+    """
+    from collections import defaultdict
+
+    ts_circuits = defaultdict(list)
+    for ts, n1, n2, p1, p2 in circuits:
+        ts_circuits[ts].append((n1, n2, p1, p2))
+
+    time_slices = sorted(ts_circuits.keys())
+    if len(time_slices) <= 1:
+        return list(circuits)
+
+    def get_connections(ts):
+        conn = {}
+        for n1, n2, p1, p2 in ts_circuits[ts]:
+            conn[(n1, p1)] = n2
+            conn[(n2, p2)] = n1
+        return conn
+
+    new_circuits = []
+    new_ts = 0
+
+    for i, ts in enumerate(time_slices):
+        # Active slice
+        for n1, n2, p1, p2 in ts_circuits[ts]:
+            new_circuits.append([new_ts, n1, n2, p1, p2])
+
+        # Check which ports change between this slice and the next
+        next_ts = time_slices[(i + 1) % len(time_slices)]
+        curr_conn = get_connections(ts)
+        next_conn = get_connections(next_ts)
+
+        all_ports = set(curr_conn.keys()) | set(next_conn.keys())
+        changing_ports = {p for p in all_ports if curr_conn.get(p) != next_conn.get(p)}
+
+        if changing_ports:
+            new_ts += 1
+            guardband_has_circuits = False
+            for n1, n2, p1, p2 in ts_circuits[ts]:
+                if (n1, p1) not in changing_ports and (n2, p2) not in changing_ports:
+                    new_circuits.append([new_ts, n1, n2, p1, p2])
+                    guardband_has_circuits = True
+            if not guardband_has_circuits:
+                # Empty guardband (all ports changing) — emit placeholder
+                new_circuits.append([new_ts, -1, -1, -1, -1])
+
+        new_ts += 1
+
+    return new_circuits
 
 
 ##########################

@@ -9,6 +9,33 @@
 # https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+
+
+@dataclass
+class TableEntry:
+    """A single P4 table entry, expressed in backend-agnostic terms.
+
+    Each backend translates these to its native format:
+    - Mininet/BMv2: reconstructs runtime_CLI strings
+    - Tofino: calls BFRt Python API
+
+    Attributes:
+        table: Logical table name, e.g. ``"ocs_schedule"``, ``"per_hop_routing"``.
+        action: Logical action name, e.g. ``"ocs_forward"``, ``"write_time_flow_entry"``.
+        match_keys: Ordered dict of match field name → value. Insertion order is
+            preserved (Python 3.7+) and is significant for positional CLI formats.
+        action_params: Ordered dict of action parameter name → value. For source-
+            routing entries the special key ``"hops"`` maps to a list of
+            ``(cur_node, send_ts, send_port)`` tuples (one per hop).
+        is_default_action: When ``True``, this entry sets the table's default action
+            (``table_set_default`` in BMv2 CLI) rather than adding a match rule.
+    """
+    table: str
+    action: str
+    match_keys: dict = field(default_factory=dict)
+    action_params: dict = field(default_factory=dict)
+    is_default_action: bool = False
 
 
 class SwitchHandle:
@@ -25,7 +52,15 @@ class BackendBase(ABC):
     Implement this class to add support for a new backend (e.g. ns-3, Tofino).
     ``BaseNetwork`` and ``DeviceManager`` interact with the network exclusively
     through this interface, keeping them backend-agnostic.
+
+    Subclass attributes
+    -------------------
+    supports_device_manager : bool
+        If False, ``start_monitor()`` skips DeviceManager creation (which
+        requires BMv2 Thrift).  Tofino uses BFRt gRPC instead.
     """
+
+    supports_device_manager: bool = True
 
     @classmethod
     def accepted_kwargs(cls) -> set:
@@ -45,7 +80,7 @@ class BackendBase(ABC):
         nb_host_per_tor: int,
         nb_link: int,
         nb_time_slices: int,
-        time_slice_duration_ms: int,
+        time_slice_duration_us: int,
         guardband_ms: int,
         tor_host_port: int,
         host_tor_port: int,
@@ -85,7 +120,7 @@ class BackendBase(ABC):
     def load_table(
         self,
         switch_name: str,
-        table_commands: str,
+        entries: list,
         print_flag: bool = False,
         save_flag: bool = False,
         save_name: str = "saved_commands",
@@ -94,9 +129,9 @@ class BackendBase(ABC):
 
         Args:
             switch_name: Name of the switch (e.g. "ocs", "tor0").
-            table_commands: Multi-line string of runtime CLI commands.
-            print_flag: Print the CLI output if True.
-            save_flag: Save commands to a file if True.
+            entries: List of :class:`TableEntry` objects to install.
+            print_flag: Print backend output if True.
+            save_flag: Save a human-readable representation to a file if True.
             save_name: Filename stem used when save_flag is True.
 
         Returns:
@@ -107,15 +142,16 @@ class BackendBase(ABC):
     def clear_table(
         self,
         switch_name: str,
-        table_name: str,
+        table: str,
         print_flag: bool = False,
     ) -> None:
         """Clear all entries from a P4 table on the named switch.
 
         Args:
             switch_name: Name of the switch (e.g. "ocs", "tor0").
-            table_name: Fully-qualified P4 table name.
-            print_flag: Print the CLI output if True.
+            table: Logical table name (e.g. ``"ocs_schedule"``).  Each backend
+                maps this to its internal table identifier.
+            print_flag: Print backend output if True.
         """
 
     @abstractmethod

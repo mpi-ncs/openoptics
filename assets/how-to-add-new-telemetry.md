@@ -6,7 +6,7 @@ We need to define thrift apis in tor_switch.thrift
 Add function in tor_switch.cpp
 
 
-Add server API at targets/tor_switch/thrift/src/TorSwitch_server.cpp
+Add server API at openoptics/backends/mininet/targets/tor_switch/thrift/src/TorSwitch_server.cpp
 
 ```python
 void get_device_metric(std::string& _return) {
@@ -16,7 +16,7 @@ switch_->get_device_metric(_return);
 ```
 
 
-targets/tor_switch/main.cpp
+openoptics/backends/mininet/targets/tor_switch/main.cpp
 Add parser
 
 
