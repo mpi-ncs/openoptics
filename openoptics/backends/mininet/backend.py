@@ -13,6 +13,7 @@ import re
 import socket
 import sys
 import tempfile
+from pathlib import Path
 
 import numpy as np
 
@@ -24,7 +25,7 @@ from mininet.moduledeps import pathCheck
 from mininet.node import Host, Switch
 from mininet.util import pmonitor
 
-from openoptics.backends.base import BackendBase, SwitchHandle
+from openoptics.backends.base import BackendBase, SwitchHandle, TableEntry
 
 # ---------------------------------------------------------------------------
 # P4 switch / host implementations
@@ -259,10 +260,20 @@ class MininetBackend(BackendBase):
 
     _CLI_PATH = "/behavioral-model/targets/simple_switch/runtime_CLI"
 
+    _BACKEND_DIR = Path(__file__).resolve().parent
+
     _DEFAULT_OCS_SW   = "/behavioral-model/targets/optical_switch/optical_switch"
-    _DEFAULT_OCS_JSON = "/openoptics/p4/ocs/ocs.json"
+    _DEFAULT_OCS_JSON = str(_BACKEND_DIR / "p4src/ocs/ocs.json")
     _DEFAULT_TOR_SW   = "/behavioral-model/targets/tor_switch/tor_switch"
-    _DEFAULT_TOR_JSON = "/openoptics/p4/tor/tor.json"
+    _DEFAULT_TOR_JSON = str(_BACKEND_DIR / "p4src/tor/tor.json")
+
+    # Maps logical table names (used by Toolbox) to BMv2-qualified names for table_clear.
+    _TABLE_CLEAR_MAP = {
+        "ocs_schedule":              "MyIngress.ocs_schedule",
+        "per_hop_routing":           "per_hop_routing",
+        "add_source_routing_entries": "source_routing",
+        "cal_port_slice_to_node":    "cal_port_slice_to_node",
+    }
 
     @classmethod
     def accepted_kwargs(cls) -> set:
@@ -294,7 +305,7 @@ class MininetBackend(BackendBase):
         nb_host_per_tor,
         nb_link,
         nb_time_slices,
-        time_slice_duration_ms,
+        time_slice_duration_us,
         guardband_ms,
         tor_host_port,
         host_tor_port,
@@ -306,6 +317,7 @@ class MininetBackend(BackendBase):
         **backend_kwargs,
     ) -> None:
         """Create the Mininet topology and start the network."""
+        time_slice_duration_ms = time_slice_duration_us // 1000
         guardband_ms = guardband_ms + link_delay_ms
         os.system("mn -c > /dev/null 2>&1")
         print("Setting up Mininet network...")
@@ -404,15 +416,47 @@ class MininetBackend(BackendBase):
     def get_ip_to_tor(self) -> dict:
         return self._ip_to_tor
 
+    @staticmethod
+    def _render_action_params(params: dict) -> str:
+        """Render action parameters to a space-separated BMv2 CLI string.
+
+        Source-routing entries store hops as ``params["hops"]`` — a list of
+        ``(cur_node, send_ts, send_port)`` tuples that are flattened here.
+        All other tables store scalar values and are rendered in insertion order.
+        """
+        if "hops" in params:
+            return " ".join(
+                f"{cur_node} {send_ts} {send_port}"
+                for cur_node, send_ts, send_port in params["hops"]
+            )
+        return " ".join(str(v) for v in params.values())
+
+    @staticmethod
+    def _entries_to_cli_str(entries: list) -> str:
+        """Convert a list of TableEntry objects to BMv2 runtime_CLI commands."""
+        lines = []
+        for e in entries:
+            if e.is_default_action:
+                lines.append(f"table_set_default {e.table} {e.action}")
+            else:
+                keys_str = " ".join(str(v) for v in e.match_keys.values())
+                params_str = MininetBackend._render_action_params(e.action_params)
+                if params_str:
+                    lines.append(f"table_add {e.table} {e.action} {keys_str} => {params_str}")
+                else:
+                    lines.append(f"table_add {e.table} {e.action} {keys_str} => ")
+        return "\n".join(lines) + ("\n" if lines else "")
+
     def load_table(
         self,
         switch_name: str,
-        table_commands: str,
+        entries: list,
         print_flag: bool = False,
         save_flag: bool = False,
         save_name: str = "saved_commands",
     ) -> bool:
         switch = self._net.nameToNode[switch_name]
+        table_commands = self._entries_to_cli_str(entries)
 
         if save_flag:
             with open(f"{save_name}.txt", "w") as fh:
@@ -441,12 +485,13 @@ class MininetBackend(BackendBase):
     def clear_table(
         self,
         switch_name: str,
-        table_name: str,
+        table: str,
         print_flag: bool = False,
     ) -> None:
+        bm2_name = self._TABLE_CLEAR_MAP.get(table, table)
         switch = self._net.nameToNode[switch_name]
         rst = switch.cmd(
-            f'echo "table_clear {table_name}" | {self._CLI_PATH} --thrift-port {switch.thrift_port}'
+            f'echo "table_clear {bm2_name}" | {self._CLI_PATH} --thrift-port {switch.thrift_port}'
         )
         if print_flag and rst:
             print(rst)

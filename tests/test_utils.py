@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 import networkx as nx
 from openoptics import utils
 from openoptics.TimeFlowTable import Path, Step, TimeFlowEntry, TimeFlowHop
+from openoptics.backends.base import TableEntry
 
 
 # ---------------------------------------------------------------------------
@@ -45,22 +46,31 @@ class TestGenOcsCommands(unittest.TestCase):
 
     def test_empty_entries_still_has_default(self):
         result = utils.gen_ocs_commands([])
-        self.assertIn("table_set_default ocs_schedule drop", result)
+        defaults = [e for e in result if e.is_default_action and e.table == "ocs_schedule"]
+        self.assertEqual(len(defaults), 1)
+        self.assertEqual(defaults[0].action, "drop")
 
     def test_single_entry_format(self):
         result = utils.gen_ocs_commands([(2, 0, 1)])
-        self.assertIn("table_add ocs_schedule ocs_forward 0 2 => 1", result)
+        regular = [e for e in result if not e.is_default_action]
+        self.assertEqual(len(regular), 1)
+        e = regular[0]
+        self.assertEqual(e.table, "ocs_schedule")
+        self.assertEqual(e.action, "ocs_forward")
+        self.assertEqual(e.match_keys["ingress_port"], 0)
+        self.assertEqual(e.match_keys["slice_id"], 2)
+        self.assertEqual(e.action_params["egress_port"], 1)
 
     def test_multiple_entries(self):
         entries = [(0, 0, 1), (1, 1, 2), (2, 2, 0)]
         result = utils.gen_ocs_commands(entries)
-        self.assertEqual(result.count("table_add ocs_schedule"), 3)
+        regular = [e for e in result if not e.is_default_action]
+        self.assertEqual(len(regular), 3)
 
     def test_default_set_before_entries(self):
         result = utils.gen_ocs_commands([(0, 0, 1)])
-        default_pos = result.index("table_set_default")
-        add_pos = result.index("table_add")
-        self.assertLess(default_pos, add_pos)
+        self.assertTrue(result[0].is_default_action)
+        self.assertFalse(result[1].is_default_action)
 
 
 # ---------------------------------------------------------------------------
@@ -69,17 +79,25 @@ class TestGenOcsCommands(unittest.TestCase):
 
 class TestTorTableIpToDst(unittest.TestCase):
 
-    def test_empty_dict_returns_empty_string(self):
-        self.assertEqual(utils.tor_table_ip_to_dst({}), "")
+    def test_empty_dict_returns_empty_list(self):
+        self.assertEqual(utils.tor_table_ip_to_dst({}), [])
 
     def test_single_mapping(self):
         result = utils.tor_table_ip_to_dst({"10.0.0.1": 0})
-        self.assertIn("table_add ip_to_dst_node write_dst 10.0.0.1 => 0", result)
+        self.assertEqual(len(result), 1)
+        e = result[0]
+        self.assertEqual(e.table, "ip_to_dst_node")
+        self.assertEqual(e.action, "write_dst")
+        self.assertEqual(e.match_keys["ip"], "10.0.0.1")
+        self.assertEqual(e.action_params["dst_node"], 0)
 
     def test_multiple_mappings(self):
         ip_map = {"10.0.0.1": 0, "10.0.1.1": 1, "10.0.2.1": 2}
         result = utils.tor_table_ip_to_dst(ip_map)
-        self.assertEqual(result.count("table_add ip_to_dst_node"), 3)
+        self.assertEqual(len(result), 3)
+        ips = [e.match_keys["ip"] for e in result]
+        self.assertIn("10.0.0.1", ips)
+        self.assertIn("10.0.1.1", ips)
 
 
 # ---------------------------------------------------------------------------
@@ -90,12 +108,18 @@ class TestTorTableArriveAtDst(unittest.TestCase):
 
     def test_format(self):
         result = utils.tor_table_arrive_at_dst(tor_id=3, to_host_port=1)
-        self.assertIn("table_add arrive_at_dst send_to_host 3 => 1", result)
+        self.assertEqual(len(result), 1)
+        e = result[0]
+        self.assertEqual(e.table, "arrive_at_dst")
+        self.assertEqual(e.action, "send_to_host")
+        self.assertEqual(e.match_keys["tor_id"], 3)
+        self.assertEqual(e.action_params["host_port"], 1)
 
     def test_different_values(self):
         for tor_id in range(4):
             result = utils.tor_table_arrive_at_dst(tor_id=tor_id, to_host_port=2)
-            self.assertIn(str(tor_id), result)
+            self.assertEqual(result[0].match_keys["tor_id"], tor_id)
+            self.assertEqual(result[0].action_params["host_port"], 2)
 
 
 # ---------------------------------------------------------------------------
@@ -106,15 +130,23 @@ class TestTorTableVerifyDesiredNode(unittest.TestCase):
 
     def test_contains_tor_id(self):
         result = utils.tor_table_verify_desired_node(tor_id=5)
-        self.assertIn("5", result)
+        tor_ids = [e.match_keys["tor_id"] for e in result]
+        self.assertIn(5, tor_ids)
 
     def test_contains_wildcard_255(self):
         result = utils.tor_table_verify_desired_node(tor_id=0)
-        self.assertIn("255", result)
+        tor_ids = [e.match_keys["tor_id"] for e in result]
+        self.assertIn(255, tor_ids)
 
     def test_two_entries_generated(self):
         result = utils.tor_table_verify_desired_node(tor_id=0)
-        self.assertEqual(result.count("table_add verify_desired_node"), 2)
+        self.assertEqual(len(result), 2)
+
+    def test_both_are_noaction(self):
+        result = utils.tor_table_verify_desired_node(tor_id=3)
+        for e in result:
+            self.assertEqual(e.action, "NoAction")
+            self.assertEqual(e.table, "verify_desired_node")
 
 
 # ---------------------------------------------------------------------------
@@ -130,15 +162,25 @@ class TestTorTableRoutingPerHop(unittest.TestCase):
     def test_specific_arrival_ts(self):
         entry = self._entry(dst=1, arrival_ts=2, cur_node=0, send_port=1, send_ts=2)
         result = utils.tor_table_routing_per_hop(entry)
-        self.assertIn("table_add per_hop_routing write_time_flow_entry", result)
-        self.assertIn("1 2 =>", result)   # dst arrival_ts =>
-        self.assertIn("0 2 1", result)    # cur_node send_ts send_port
+        self.assertEqual(len(result), 1)
+        e = result[0]
+        self.assertEqual(e.table, "per_hop_routing")
+        self.assertEqual(e.action, "write_time_flow_entry")
+        self.assertEqual(e.match_keys["dst"], 1)
+        self.assertEqual(e.match_keys["arrival_ts"], 2)
+        self.assertEqual(e.action_params["cur_node"], 0)
+        self.assertEqual(e.action_params["send_ts"], 2)
+        self.assertEqual(e.action_params["send_port"], 1)
 
     def test_wildcard_arrival_ts_generates_per_slice_entries(self):
         hop = TimeFlowHop(cur_node=0, send_port=1, send_ts=0)
         entry = TimeFlowEntry(dst=1, arrival_ts=None, hops=hop)
         result = utils.tor_table_routing_per_hop(entry, nb_time_slices=4)
-        self.assertEqual(result.count("table_add per_hop_routing"), 4)
+        self.assertEqual(len(result), 4)
+        # Wildcard: match key arrival_ts == action param send_ts for each slice
+        for i, e in enumerate(result):
+            self.assertEqual(e.match_keys["arrival_ts"], i)
+            self.assertEqual(e.action_params["send_ts"], i)
 
 
 # ---------------------------------------------------------------------------
@@ -154,8 +196,15 @@ class TestTorTableRoutingSource(unittest.TestCase):
         hop = TimeFlowHop(cur_node=0, send_port=1, send_ts=1)
         entry = self._entry(dst=2, arrival_ts=1, hops=hop)
         result = utils.tor_table_routing_source(entry)
-        self.assertIn("table_add add_source_routing_entries", result)
-        self.assertIn("write_ssrr_header_0", result)  # 1 hop → index 0
+        self.assertEqual(len(result), 1)
+        e = result[0]
+        self.assertEqual(e.table, "add_source_routing_entries")
+        self.assertEqual(e.action, "write_ssrr_header_0")  # 1 hop → index 0
+        self.assertEqual(e.match_keys["dst"], 2)
+        self.assertEqual(e.match_keys["arrival_ts"], 1)
+        hops = e.action_params["hops"]
+        self.assertEqual(len(hops), 1)
+        self.assertEqual(hops[0], (0, 1, 1))  # (cur_node, send_ts, send_port)
 
     def test_two_hop_uses_header_1(self):
         hops = [
@@ -164,13 +213,19 @@ class TestTorTableRoutingSource(unittest.TestCase):
         ]
         entry = self._entry(dst=2, arrival_ts=0, hops=hops)
         result = utils.tor_table_routing_source(entry)
-        self.assertIn("write_ssrr_header_1", result)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].action, "write_ssrr_header_1")
+        self.assertEqual(len(result[0].action_params["hops"]), 2)
 
     def test_wildcard_arrival_ts_generates_per_slice_entries(self):
         hop = TimeFlowHop(cur_node=0, send_port=1, send_ts=0)
         entry = self._entry(dst=1, arrival_ts=None, hops=hop)
         result = utils.tor_table_routing_source(entry, nb_time_slices=3)
-        self.assertEqual(result.count("table_add add_source_routing_entries"), 3)
+        self.assertEqual(len(result), 3)
+        for i, e in enumerate(result):
+            self.assertEqual(e.match_keys["arrival_ts"], i)
+            # In wildcard mode send_ts = arrival_ts
+            self.assertEqual(e.action_params["hops"][0][1], i)
 
 
 # ---------------------------------------------------------------------------

@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from helpers import FakeBackend
 from openoptics.Toolbox import BaseNetwork
+from openoptics import OpticalRouting
 
 
 def _make_net(nb_node=4, nb_link=1, arch_mode="TO"):
@@ -175,7 +176,7 @@ class TestDeployTopo(unittest.TestCase):
     def test_deploy_calls_clear_ocs_table(self):
         self.net.deploy_topo([(0, 0, 1, 0, 0)])
         ocs_clears = [name for sw, name in self.backend.cleared if sw == "ocs"]
-        self.assertIn("MyIngress.ocs_schedule", ocs_clears)
+        self.assertIn("ocs_schedule", ocs_clears)
 
     def test_deploy_loads_ocs_table(self):
         self.net.deploy_topo([(0, 0, 1, 0, 0)])
@@ -183,7 +184,10 @@ class TestDeployTopo(unittest.TestCase):
         self.assertTrue(len(ocs_loads) > 0, "Expected at least one load_table call for ocs")
 
     def test_deploy_loads_tor_tables(self):
+        """ToR utility tables are loaded during deploy_routing(), not deploy_topo()."""
         self.net.deploy_topo([(0, 0, 1, 0, 0)])
+        paths = OpticalRouting.routing_direct(self.net.get_topo())
+        self.net.deploy_routing(paths, routing_mode="Per-hop")
         tor_loads = [sw for sw, _ in self.backend.loaded if sw.startswith("tor")]
         self.assertGreaterEqual(len(tor_loads), 2, "Expected load_table for each ToR")
 

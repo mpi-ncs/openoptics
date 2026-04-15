@@ -201,6 +201,43 @@ class TestRoutingVlb(unittest.TestCase):
                 # Direct path: step is port-based
                 self.assertEqual(p.steps[0].step_type, "port")
 
+    def test_random_true_emits_sentinel_hop0(self):
+        """random=True should emit all-255 sentinel for hop0 on indirect paths."""
+        paths = OpticalRouting.routing_vlb(
+            self.slice_to_topo, self.tor_to_ocs_port, random=True)
+        indirect = [p for p in paths if len(p.steps) == 2]
+        self.assertGreater(len(indirect), 0, "Should have at least one indirect path")
+        for p in indirect:
+            hop0 = p.steps[0]
+            self.assertEqual(hop0.step_type, "port")
+            self.assertEqual(hop0.send_port, 255)
+            self.assertEqual(hop0.send_ts, 255)
+            self.assertEqual(hop0.cur_node, 255)
+
+    def test_random_false_emits_concrete_hop0(self):
+        """random=False (default) should emit concrete port/ts for hop0."""
+        paths = OpticalRouting.routing_vlb(
+            self.slice_to_topo, self.tor_to_ocs_port, random=False)
+        indirect = [p for p in paths if len(p.steps) == 2]
+        self.assertGreater(len(indirect), 0)
+        for p in indirect:
+            hop0 = p.steps[0]
+            self.assertEqual(hop0.step_type, "port")
+            self.assertNotEqual(hop0.send_port, 255)
+            self.assertNotEqual(hop0.send_ts, 255)
+
+    def test_random_direct_paths_unchanged(self):
+        """random=True should not affect direct (1-hop) paths."""
+        paths_det = OpticalRouting.routing_vlb(
+            self.slice_to_topo, self.tor_to_ocs_port, random=False)
+        paths_rng = OpticalRouting.routing_vlb(
+            self.slice_to_topo, self.tor_to_ocs_port, random=True)
+        direct_det = [(p.src, p.dst, p.arrival_ts, p.steps[0].send_port, p.steps[0].send_ts)
+                      for p in paths_det if len(p.steps) == 1]
+        direct_rng = [(p.src, p.dst, p.arrival_ts, p.steps[0].send_port, p.steps[0].send_ts)
+                      for p in paths_rng if len(p.steps) == 1]
+        self.assertEqual(sorted(direct_det), sorted(direct_rng))
+
 
 # ---------------------------------------------------------------------------
 # remove_suboptimal_paths
@@ -253,6 +290,220 @@ class TestExtendPathsToAllTimeSlice(unittest.TestCase):
     def test_empty_paths_raises(self):
         with self.assertRaises(AssertionError):
             OpticalRouting.extend_paths_to_all_time_slice([], nb_ts=4)
+
+
+# ---------------------------------------------------------------------------
+# routing_hoho — optimal substructure & no forwarding loops
+# ---------------------------------------------------------------------------
+
+def _opera_4node_1link_topo():
+    """4-node, 1-link opera schedule with guardband slots."""
+    circuits = OpticalTopo.opera(nb_node=4, nb_link=1, guardband=True)
+    return _build_slice_to_topo(4, circuits)
+
+
+def _opera_4node_2link_topo():
+    """4-node, 2-link opera schedule with guardband slots."""
+    circuits = OpticalTopo.opera(nb_node=4, nb_link=2, guardband=True)
+    return _build_slice_to_topo(4, circuits)
+
+
+def _hoho_per_hop_table(slice_to_topo, max_hop=2):
+    """Return (tor, cs, dst) -> (send_ts, send_port, next_tor)."""
+    from openoptics import utils
+    paths = OpticalRouting.routing_hoho(slice_to_topo, max_hop=max_hop)
+    per_src = utils.path2entries(paths, routing_mode="Per-hop")
+    table = {}
+    for src, entries in per_src.items():
+        for e in entries:
+            hop = e.hops[0]
+            # In DiGraph, find the next_tor such that (src, next_tor) edge at
+            # slot=hop.send_ts has port1 == hop.send_port_or_node.
+            slot_topo = slice_to_topo[hop.send_ts]
+            next_tor = None
+            for cand in slot_topo.neighbors(src):
+                if slot_topo[src][cand].get("port1") == hop.send_port_or_node:
+                    next_tor = cand
+                    break
+            table[(src, e.arrival_ts, e.dst)] = (
+                hop.send_ts,
+                hop.send_port_or_node,
+                next_tor,
+            )
+    return table
+
+
+class TestRoutingHohoOptimalSubstructure(unittest.TestCase):
+
+    def test_hoho_no_forwarding_loops_1link(self):
+        """Simulate forwarding from every (tor, cs, dst) entry; assert the
+        chain terminates at dst within nb_ts*3 steps without revisits."""
+        slice_to_topo = _opera_4node_1link_topo()
+        nb_ts = len(slice_to_topo)
+        table = _hoho_per_hop_table(slice_to_topo, max_hop=2)
+
+        for (tor, cs, dst), (send_ts, _port, next_tor) in list(table.items()):
+            self.assertIsNotNone(next_tor,
+                f"entry ({tor}, cs={cs}, dst={dst}) has no resolvable next_tor")
+            visited = set()
+            cur, ccs = tor, cs
+            for _step in range(nb_ts * 3):
+                if cur == dst:
+                    break
+                self.assertNotIn((cur, ccs), visited,
+                    f"loop detected while forwarding packet from ({tor}, cs={cs}) "
+                    f"to dst={dst}: revisit ({cur}, ccs={ccs})")
+                visited.add((cur, ccs))
+                entry = table.get((cur, ccs, dst))
+                self.assertIsNotNone(entry,
+                    f"no entry for ({cur}, cs={ccs}, dst={dst}) "
+                    f"while forwarding from ({tor}, cs={cs})")
+                e_send_ts, _e_port, e_next = entry
+                self.assertIsNotNone(e_next,
+                    f"entry ({cur}, cs={ccs}, dst={dst}) has no next_tor")
+                # Packet lands at e_next with cur_slice = e_send_ts
+                # (same-slot transmit assumption, matches the runtime).
+                cur, ccs = e_next, e_send_ts
+            else:
+                self.fail(
+                    f"forwarding chain from ({tor}, cs={cs}) to dst={dst} did "
+                    f"not terminate within {nb_ts*3} steps")
+
+    def test_hoho_no_forwarding_loops_2link(self):
+        """Same invariant on the 4-node 2-link schedule."""
+        slice_to_topo = _opera_4node_2link_topo()
+        nb_ts = len(slice_to_topo)
+        table = _hoho_per_hop_table(slice_to_topo, max_hop=2)
+
+        for (tor, cs, dst), (send_ts, _port, next_tor) in list(table.items()):
+            self.assertIsNotNone(next_tor)
+            visited = set()
+            cur, ccs = tor, cs
+            for _ in range(nb_ts * 3):
+                if cur == dst:
+                    break
+                self.assertNotIn((cur, ccs), visited,
+                    f"loop from ({tor}, cs={cs}) to dst={dst}")
+                visited.add((cur, ccs))
+                entry = table.get((cur, ccs, dst))
+                self.assertIsNotNone(entry)
+                cur, ccs = entry[2], entry[0]
+            else:
+                self.fail(f"chain from ({tor}, cs={cs}) to dst={dst} did not terminate")
+
+    def test_hoho_known_loop_repaired(self):
+        """On the 4-node 1-link schedule (the historical bug fixture):
+
+        - (tor0, cs=0, dst=tor1) stays as the 2-slot multi-hop plan
+          (first step: slot 0 via tor3, since that's the true shortest).
+        - (tor3, cs=0, dst=tor1) must NOT be "slot 0 via tor0" (the old
+          loop-generating entry); it should be "slot 2 direct → tor1"
+          which is the substructure of tor0's 2-hop plan and also the
+          optimal wait-then-direct at tor3.
+        """
+        slice_to_topo = _opera_4node_1link_topo()
+        table = _hoho_per_hop_table(slice_to_topo, max_hop=2)
+
+        # tor0 at cs=0 for dst=tor1: 2-hop via tor3 at slot 0
+        self.assertIn((0, 0, 1), table)
+        send_ts_0, _, next_0 = table[(0, 0, 1)]
+        self.assertEqual(send_ts_0, 0,
+            "tor0 cs=0 dst=tor1 should transmit at slot 0 (via tor3)")
+        self.assertEqual(next_0, 3,
+            "tor0 cs=0 dst=tor1 first hop should be to tor3")
+
+        # tor3 at cs=0 for dst=tor1: must be direct slot 2 (the subpath)
+        self.assertIn((3, 0, 1), table)
+        send_ts_3, _, next_3 = table[(3, 0, 1)]
+        self.assertEqual(send_ts_3, 2,
+            "tor3 cs=0 dst=tor1 should transmit at slot 2 (direct), not slot 0")
+        self.assertEqual(next_3, 1,
+            "tor3 cs=0 dst=tor1 should go direct to tor1, not back to tor0")
+
+    def test_hoho_optimal_substructure_for_multi_hop_paths(self):
+        """For every multi-hop HoHo path (src, cs, dst) with steps
+        [step0, step1, ...], the first-step landing state (step0.send_node,
+        cs'=step0.send_ts) must have a Per-hop entry whose first transmit
+        matches step1 exactly.  I.e., the intermediate's entry is the
+        subpath of the source's plan.
+        """
+        slice_to_topo = _opera_4node_1link_topo()
+        paths = OpticalRouting.routing_hoho(slice_to_topo, max_hop=2)
+        # Per-hop entries from path2entries (keys on path.src, arrival_ts, dst)
+        per_hop_first = {}
+        for p in paths:
+            s0 = p.steps[0]
+            per_hop_first[(p.src, p.arrival_ts, p.dst)] = (
+                s0.send_ts, s0.send_port, s0.send_node)
+
+        for p in paths:
+            if len(p.steps) < 2:
+                continue
+            # Subpath invariant: the intermediate's entry for (cs=s0.send_ts,
+            # dst=p.dst) must start with exactly s1.
+            s0, s1 = p.steps[0], p.steps[1]
+            inter = s0.send_node
+            sub_key = (inter, s0.send_ts, p.dst)
+            self.assertIn(sub_key, per_hop_first,
+                f"intermediate {inter} has no entry at cs={s0.send_ts} for "
+                f"dst={p.dst} — path {p.src}->{inter}->{s1.send_node}... is broken")
+            sub_send_ts, sub_port, sub_next = per_hop_first[sub_key]
+            self.assertEqual(sub_send_ts, s1.send_ts,
+                f"substructure mismatch: {p.src} path says {inter} should "
+                f"send at slot {s1.send_ts}, but {inter}'s own entry says "
+                f"slot {sub_send_ts}")
+            self.assertEqual(sub_next, s1.send_node,
+                f"substructure mismatch: {p.src} path says {inter} should "
+                f"forward to {s1.send_node}, but {inter}'s own entry says "
+                f"{sub_next}")
+
+    def test_hoho_never_worse_than_direct(self):
+        """For every (src, cs, dst) entry, the HoHo plan's total duration
+        (from cs until the packet arrives at dst) must be ≤ the direct
+        plan's duration.  Since the Dijkstra minimises duration and direct
+        routing is a feasible (0 or 1 transmit) option in the same graph,
+        this should always hold."""
+        slice_to_topo = _opera_4node_1link_topo()
+        nb_ts = len(slice_to_topo)
+        table = _hoho_per_hop_table(slice_to_topo, max_hop=2)
+
+        # Build a direct-routing reference: (src, dst, cs) -> (send_ts_absolute, duration)
+        direct_ref = {}
+        for s in range(4):
+            for d in range(4):
+                if s == d:
+                    continue
+                for dp in OpticalRouting.find_direct_path(slice_to_topo, s, d):
+                    direct_ref[(s, dp.arrival_ts, d)] = dp.steps[0].send_ts
+
+        def _dur_from(entry_table, tor, cs, dst, max_steps=None):
+            if max_steps is None:
+                max_steps = nb_ts * 3
+            total = 0
+            cur, ccs = tor, cs
+            for _ in range(max_steps):
+                if cur == dst:
+                    return total
+                entry = entry_table.get((cur, ccs, dst))
+                if entry is None:
+                    return None
+                e_send_ts, _p, e_next = entry
+                wait = (e_send_ts - ccs + nb_ts) % nb_ts
+                total += wait
+                cur, ccs = e_next, e_send_ts
+            return None
+
+        for (tor, cs, dst) in list(table.keys()):
+            hoho_dur = _dur_from(table, tor, cs, dst)
+            self.assertIsNotNone(hoho_dur,
+                f"hoho chain from ({tor}, {cs}) to {dst} did not terminate")
+            direct_send = direct_ref.get((tor, cs, dst))
+            if direct_send is None:
+                continue
+            direct_dur = (direct_send - cs + nb_ts) % nb_ts
+            self.assertLessEqual(hoho_dur, direct_dur,
+                f"hoho worse than direct at ({tor}, cs={cs}, dst={dst}): "
+                f"hoho dur={hoho_dur}, direct dur={direct_dur}")
 
 
 if __name__ == "__main__":

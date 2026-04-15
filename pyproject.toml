@@ -18,12 +18,15 @@ Repository = "https://github.com/your-org/openoptics"
 #    "thrift>=0.22.0",
 #]
 
+[project.optional-dependencies]
+tofino = ["paramiko", "tomli; python_version < '3.11'"]
+
 [tool.setuptools]
 packages = [
     "openoptics",
     "openoptics.backends",
     "openoptics.backends.mininet",
-#    "openopticslib"
+    "openoptics.backends.tofino",
 ]
 
 

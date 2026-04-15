@@ -23,5 +23,8 @@ def create_backend(backend_name: str) -> BackendBase:
     if backend_name == "Mininet":
         from openoptics.backends.mininet.backend import MininetBackend
         return MininetBackend()
+    elif backend_name == "Tofino":
+        from openoptics.backends.tofino.backend import TofinoBackend
+        return TofinoBackend()
     else:
         raise ValueError(f"Unsupported backend: {backend_name}")

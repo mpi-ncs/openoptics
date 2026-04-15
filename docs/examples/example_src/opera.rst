@@ -6,9 +6,9 @@ You can specify the number of nodes and links per node using the topology functi
 :py:meth:`openoptics.OpticalTopo.opera`, and configure routing 
 with :py:meth:`openoptics.OpticalRouting.routing_ksp`
 
-.. literalinclude:: ../../../examples/routing_opera.py
+.. literalinclude:: ../../../examples/mininet_routing_opera.py
    :language: python
    :linenos:
-   :caption: examples/routing_opera.py
+   :caption: examples/mininet_routing_opera.py
 
 .. [1] `Expanding across time to deliver bandwidth efficiency and low latency <https://www.usenix.org/conference/nsdi20/presentation/mellette>`_, NSDI'20,

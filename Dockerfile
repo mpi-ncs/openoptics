@@ -51,6 +51,7 @@ RUN pip uninstall channels
 # Install Django first then channels["daphne"] to avoid some errors for installing daphne
 RUN pip install --no-cache-dir channels-redis channels["daphne"]
 RUN pip install --no-cache-dir nnpy
+RUN pip install --no-cache-dir paramiko
 
 RUN rm -rf /usr/local/bin/thrift /usr/local/include/thrift /usr/local/include/bm/ /usr/local/bin/bm_CLI /usr/local/bin/bm_nanomsg_events /usr/local/bin/bm_p4dbg  
 
@@ -71,10 +72,10 @@ WORKDIR /
 RUN git clone https://github.com/p4lang/behavioral-model.git
 WORKDIR /behavioral-model
 RUN git checkout 8e183a39b372cb9dc563e9d0cf593323249cd88b
-RUN cp -r /openoptics/targets/tor_switch ./targets
-RUN cp -r /openoptics/targets/optical_switch ./targets
-RUN cp /openoptics/targets/configure.ac ./configure.ac
-RUN cp /openoptics/targets/Makefile.am ./targets
+RUN cp -r /openoptics/openoptics/backends/mininet/targets/tor_switch ./targets
+RUN cp -r /openoptics/openoptics/backends/mininet/targets/optical_switch ./targets
+RUN cp /openoptics/openoptics/backends/mininet/targets/configure.ac ./configure.ac
+RUN cp /openoptics/openoptics/backends/mininet/targets/Makefile.am ./targets
 
 RUN ./autogen.sh
 #RUN ./configure 'CXXFLAGS=-O0 -g' --enable-debugger

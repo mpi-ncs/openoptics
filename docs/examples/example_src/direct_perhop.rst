@@ -7,7 +7,7 @@ on the destination address, enabling packets to traverse the network hop-by-hop 
 final destination. This method provides a straightforward routing mechanism where each intermediate 
 node determines the next hop based on local routing information.
 
-.. literalinclude:: ../../../examples/routing_direct_perhop.py
+.. literalinclude:: ../../../examples/mininet_routing_direct_perhop.py
    :language: python
    :linenos:
-   :caption: examples/routing_direct_perhop.py
+   :caption: examples/mininet_routing_direct_perhop.py

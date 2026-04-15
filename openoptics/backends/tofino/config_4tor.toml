@@ -1,0 +1,87 @@
+# OpenOptics Tofino Backend — example 4-ToR / 1-uplink configuration.
+#
+# This is a template.  Replace the placeholder hostnames, IP addresses, MACs
+# and usernames with the values for your own testbed before deploying.
+#
+# Layout this example describes:
+#   One OCS switch and one ToR switch (a physical Tofino2 hosting 4 logical
+#   ToRs, one per pipe).  Two of the logical ToRs have servers attached; the
+#   other two are transit-only.  Each logical ToR has a single uplink to the
+#   OCS.
+
+[sde]
+path     = "/home/p4/bf-sde-9.12.0"
+install  = "/home/p4/bf-sde-9.12.0/install"
+build_p4 = true
+
+[bfrt]
+port            = 50052
+startup_timeout = 60
+
+[bandwidth]
+uplink_gbps     = 100
+uplink_fec      = "NONE"
+electrical_gbps = 100
+electrical_fec  = "NONE"
+server_gbps     = 100
+server_fec      = "NONE"
+
+[servers]
+user            = "USER"
+key_file        = "~/.ssh/id_rsa"
+connect_timeout = 10
+
+# Remove this section if the switches are directly reachable.
+[jump_host]
+host            = "jumphost.example.com"
+user            = "USER"
+key_file        = "~/.ssh/id_rsa"
+target_key_file = "~/.ssh/id_rsa"
+connect_timeout = 30
+
+[ocs_switch]
+host            = "OCS_SWITCH_IP"
+user            = "p4"
+key_file        = "~/.ssh/id_rsa"
+connect_timeout = 30
+
+[[physical_switch]]
+name            = "tor-switch-1"
+host            = "TOR_SWITCH_IP"
+user            = "p4"
+key_file        = "~/.ssh/id_rsa"
+connect_timeout = 30
+
+  [[physical_switch.logical_tor]]
+  physical_switch    = "tor-switch-1"
+  tor_id             = 0
+  pipe_id            = 1
+  tor_ocs_port_pairs = [["7/0", "7/0"]]
+  server_ports       = ["1/0"]
+  server_nic         = "enp23s0f1np1"
+  server_mac         = "aa:bb:cc:dd:ee:01"
+  host_ip            = "10.0.0.1"
+  server_mgmt_ip     = "SERVER1_MGMT_IP"
+
+  [[physical_switch.logical_tor]]
+  physical_switch    = "tor-switch-1"
+  tor_id             = 1
+  pipe_id            = 2
+  tor_ocs_port_pairs = [["15/0", "15/0"]]
+  server_ports       = ["9/0"]
+  server_nic         = "enp23s0f1np1"
+  server_mac         = "aa:bb:cc:dd:ee:02"
+  host_ip            = "10.0.0.2"
+  server_mgmt_ip     = "SERVER2_MGMT_IP"
+
+  [[physical_switch.logical_tor]]
+  physical_switch    = "tor-switch-1"
+  tor_id             = 2
+  pipe_id            = 3
+  tor_ocs_port_pairs = [["23/0", "23/0"]]
+
+  [[physical_switch.logical_tor]]
+  physical_switch    = "tor-switch-1"
+  tor_id             = 3
+  pipe_id            = 0
+  tor_ocs_port_pairs = [["31/0", "31/0"]]

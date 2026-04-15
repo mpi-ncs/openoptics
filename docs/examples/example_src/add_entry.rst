@@ -7,7 +7,7 @@ For simplicity, we implement direct routing by adding time-flow entries only to 
 The detailed definition of the time-flow entry can be found in the :doc:`../../apis/timeflowtable`.
 
 
-.. literalinclude:: ../../../examples/routing_add_entry.py
+.. literalinclude:: ../../../examples/mininet_routing_add_entry.py
    :language: python
    :linenos:
-   :caption: examples/routing_add_entry.py
+   :caption: examples/mininet_routing_add_entry.py

@@ -9,6 +9,7 @@
 # https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en
 
 import json
+import heapq
 import networkx as nx
 from typing import List, Dict
 import queue
@@ -354,38 +355,196 @@ def routing_direct(slice_to_topo: Dict[int, nx.Graph]) -> List[Path]:
     return paths
 
 
+def _dijkstra_to_dst(slice_to_topo: Dict[int, nx.Graph], dst, max_hop):
+    """
+    Backward Dijkstra on the time-expanded schedule graph, from a fixed
+    destination.  For every ``(src_tor, cur_slice)`` state it finds the
+    shortest-wait forwarding plan to ``dst`` using at most ``max_hop``
+    transmit edges, with full optimal substructure: if a packet at
+    ``(T, C)`` is on the shortest path to ``dst`` and the next state is
+    ``(T', C)``, then ``(T', C)``'s own stored plan is the matching subpath.
+
+    Time-expanded graph
+    -------------------
+    States: ``(T, C, h)`` where T is a tor, C is a cur_slice, and h is
+    the number of transmit edges still available (0 ≤ h ≤ max_hop).
+    Forward edges:
+
+      * wait:      ``(T, C, h) -> (T, (C+1) % nb_ts, h)`` with cost 1
+      * transmit:  ``(T, C, h) -> (T', C, h-1)`` with cost 0, iff
+                    ``slice_to_topo[C]`` has an edge (T, T') and h > 0
+
+    Goal states: any ``(dst, *, *)``.
+
+    Returns
+    -------
+    parent : dict
+        ``state -> (next_state, edge_type, port_or_None)``.  For each
+        non-goal state this points at the first forward edge along the
+        shortest path.  ``edge_type`` is ``"wait"`` or ``"tx"``; ``port``
+        is only set for transmit edges.  Goal states map to ``None``.
+    dist : dict
+        ``state -> shortest forward duration to dst`` (in slices).
+    """
+    nb_ts = len(slice_to_topo)
+    any_topo = next(iter(slice_to_topo.values()))
+    nodes = set(any_topo.nodes())
+    is_directed = any_topo.is_directed() if hasattr(any_topo, "is_directed") else False
+
+    INF = float("inf")
+    dist: Dict[tuple, float] = {}
+    parent: Dict[tuple, tuple] = {}
+    pq: List[tuple] = []
+
+    # Initial goal states: already at dst, any slice, any hop budget.
+    for c in range(nb_ts):
+        for h in range(max_hop + 1):
+            state = (dst, c, h)
+            dist[state] = 0
+            parent[state] = None
+            heapq.heappush(pq, (0, state))
+
+    while pq:
+        d, state = heapq.heappop(pq)
+        if d > dist.get(state, INF):
+            continue
+        T, C, h = state
+
+        # Relax reverse-wait: forward (T, (C-1) % nb_ts, h) --wait--> (T, C, h)
+        prev_C = (C - 1 + nb_ts) % nb_ts
+        ns = (T, prev_C, h)
+        nd = d + 1
+        if nd < dist.get(ns, INF):
+            dist[ns] = nd
+            parent[ns] = (state, "wait", None)
+            heapq.heappush(pq, (nd, ns))
+
+        # Relax reverse-transmit: forward (T', C, h+1) --tx--> (T, C, h)
+        # iff edge (T', T) exists at slot C.  The forward transmit from
+        # (T', C, h+1) uses one hop, so only allow it if h + 1 <= max_hop.
+        if h < max_hop:
+            slot_topo = slice_to_topo[C]
+            if is_directed:
+                candidates = slot_topo.predecessors(T)
+            else:
+                candidates = slot_topo.neighbors(T)
+            for T_prime in candidates:
+                if T_prime == T:
+                    continue
+                port = find_send_port(slot_topo, T_prime, T)
+                if port is None:
+                    continue
+                ns = (T_prime, C, h + 1)
+                nd = d  # transmit cost 0
+                if nd < dist.get(ns, INF):
+                    dist[ns] = nd
+                    parent[ns] = (state, "tx", port)
+                    heapq.heappush(pq, (nd, ns))
+
+    return parent, dist
+
+
+def _reconstruct_full_path(parent, start_state):
+    """
+    Walk the Dijkstra parent chain from ``start_state`` forward to the
+    destination, collecting one ``Step`` per transmit edge.  Wait edges
+    are implicit in the gap between the starting ``cur_slice`` and each
+    transmit's ``send_ts``.
+
+    Returns a list of ``Step`` objects (empty list if ``start_state`` is
+    already at the destination, ``None`` if the parent chain is broken —
+    which shouldn't happen if ``start_state`` was reachable in the
+    Dijkstra relaxation).
+    """
+    steps: List[Step] = []
+    cur = start_state
+    # A bounded walk guards against pathological cycles; in practice each
+    # wait strictly advances cur_slice and each tx strictly decrements the
+    # remaining-hop budget, so the walk terminates in O(nb_ts + max_hop).
+    for _ in range(1024):
+        entry = parent.get(cur)
+        if entry is None:
+            # Reached a goal state (we're at dst).
+            return steps
+        next_state, edge_type, port = entry
+        if edge_type == "tx":
+            T, C, _h = cur
+            next_T, _next_C, _next_h = next_state
+            steps.append(
+                Step(
+                    cur_node=T,
+                    step_type="port",
+                    send_port=port,
+                    send_ts=C,
+                    send_node=next_T,
+                )
+            )
+        # "wait" edges advance cur without emitting a step.
+        cur = next_state
+    return None
+
+
 def routing_hoho(slice_to_topo: Dict[int, nx.Graph], max_hop) -> list:
     """
-    HOHO routing.
+    HoHo routing — shortest-path forwarding over the time-expanded
+    schedule graph.
+
+    For every ``(src, cur_slice, dst)`` the emitted path represents the
+    minimum-duration forwarding plan from ``(src, cur_slice)`` to ``dst``,
+    using up to ``max_hop`` transmit edges (additional waits are free).
+    By construction the generated paths have optimal substructure: if a
+    packet's plan from ``(src, cs)`` to ``dst`` goes through intermediate
+    ``(inter, cs')``, then ``inter``'s stored plan at ``cs'`` for the
+    same ``dst`` is the matching subpath.  This property is what makes
+    ``routing_mode="Per-hop"`` forwarding loop-free even when the table
+    lookup has no source-awareness.
 
     Args:
         slice_to_topo: Topology for each time slice
-        max_hop: Maximum number of hops allowed
+        max_hop: Maximum number of transmit hops along any path
 
     Returns:
-        A list of paths for hoho routing
+        A list of ``Path`` objects.  Each path's ``steps`` contains one
+        ``Step`` per transmit hop (``path2entries`` trims to the first
+        step for Per-hop routing and keeps all steps for Source routing).
     """
-    logger = logging.getLogger(__name__)
+    nb_ts = len(slice_to_topo)
+    any_topo = next(iter(slice_to_topo.values()))
+    nodes = sorted(any_topo.nodes())
 
-    paths = []
-    nodes = slice_to_topo[0].nodes()
-
-    # Search path for every dst node
+    paths: List[Path] = []
     for dst in nodes:
+        parent, _dist = _dijkstra_to_dst(slice_to_topo, dst, max_hop)
         for src in nodes:
             if src == dst:
                 continue
-            paths.extend(find_n_hop_path_node_pair(slice_to_topo, src, dst, max_hop))
-
+            for cs in range(nb_ts):
+                start = (src, cs, max_hop)
+                if start not in parent:
+                    # Unreachable within max_hop transmits at this (cs).
+                    continue
+                steps = _reconstruct_full_path(parent, start)
+                if not steps:
+                    # (src, cs) is trivially the destination — shouldn't happen
+                    # because src != dst.
+                    continue
+                paths.append(
+                    Path(src=src, arrival_ts=cs, dst=dst, steps=steps)
+                )
     return paths
 
-def routing_vlb(slice_to_topo: Dict[int, nx.Graph], tor_to_ocs_port: List[int]) -> List[Path]:
+def routing_vlb(slice_to_topo: Dict[int, nx.Graph], tor_to_ocs_port: List[int],
+                random: bool = False) -> List[Path]:
     """
     VLB routing.
 
     Args:
         slice_to_topo: Topology for each time slice
         tor_to_ocs_port: Port mapping from ToR to OCS
+        random: If True, emit all-255 sentinel for the first hop so that the
+            data plane picks a random port at runtime (requires Tofino Random<>
+            support).  If False (default), use a deterministic port selection
+            from tor_to_ocs_port.
 
     Returns:
         A list of paths for VLB routing
@@ -414,17 +573,26 @@ def routing_vlb(slice_to_topo: Dict[int, nx.Graph], tor_to_ocs_port: List[int]) 
                         ]
                     )
                 else: #There is no direct connection at this time slice. Send to a random node.
+                    if random:
+                        first_step = Step(
+                            cur_node=255,
+                            step_type="port",
+                            send_port=255,
+                            send_ts=255,
+                        )
+                    else:
+                        first_step = Step(
+                            cur_node=node1,
+                            step_type="port",
+                            send_port=tor_to_ocs_port[ts%len(tor_to_ocs_port)],
+                            send_ts=ts,
+                        )
                     path = Path(
                         src=node1,
                         arrival_ts=ts,
                         dst=node2,
                         steps=[
-                            Step(
-                                cur_node=node1,
-                                step_type="port",
-                                send_port=tor_to_ocs_port[ts%len(tor_to_ocs_port)], # Send through a "random" port
-                                send_ts=ts,
-                            ),
+                            first_step,
                             Step(cur_node=255, step_type="node", send_node=node2),
                         ],
                     )
