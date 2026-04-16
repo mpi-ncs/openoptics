@@ -1,32 +1,154 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "openoptics"
-version = "0.1.0"
-description = "Add your description here"
+name = "openoptics-dcn"
+version = "0.0.1"
+description = "A research framework for designing, testing, and deploying optical datacenter networks"
 readme = "README.md"
 requires-python = ">=3.8"
+license = { file = "LICENSE.md" }
+authors = [
+    { name = "Yiming Lei", email = "ylei@mpi-inf.mpg.de" },
+]
+keywords = ["networking", "optical", "datacenter", "p4", "mininet", "tofino", "ns-3"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: System :: Networking",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Operating System :: POSIX :: Linux",
+    "License :: Other/Proprietary License",
+    "License :: Free for non-commercial use",
+]
+dependencies = [
+    "networkx>=3.0",
+    "numpy>=1.20",
+    # Python 3.8 predates importlib.resources.files / as_file (added 3.9).
+    # The backport is a drop-in replacement; no-op on 3.9+.
+    "importlib_resources>=5.0; python_version < '3.9'",
+]
+
+[project.scripts]
+openoptics-gen-config      = "openoptics.backends.tofino.gen_config:main"
+openoptics-gen-examples    = "openoptics._cli.gen_examples:main"
+openoptics-gen-tutorials   = "openoptics._cli.gen_tutorials:main"
 
 [project.urls]
 Homepage = "https://openoptics.mpi-inf.mpg.de"
-Documentation = "https://openoptics.mpi-inf.mpg.de/tutorials/1-get-started.html"
-Repository = "https://github.com/your-org/openoptics"
-
-#dependencies = [
-#    "django>=5.2.5",
-#    "matplotlib>=3.10.5",
-#    "mininet>=2.3.0.dev6",
-#    "networkx>=3.5",
-#    "thrift>=0.22.0",
-#]
+Documentation = "https://openoptics.mpi-inf.mpg.de"
+Repository = "https://github.com/mpi-ncs/openoptics"
+Paper = "https://arxiv.org/abs/2411.18319"
 
 [project.optional-dependencies]
-tofino = ["paramiko", "tomli; python_version < '3.11'"]
-
-[tool.setuptools]
-packages = [
-    "openoptics",
-    "openoptics.backends",
-    "openoptics.backends.mininet",
-    "openoptics.backends.tofino",
+# Mininet backend: `mininet` (Python 3 bindings for constructing networks),
+# `thrift` (BMv2 Thrift client).  The `mn` CLI utilities, the BMv2 binaries
+# (`/behavioral-model/targets/*`) and kernel plumbing must come from the
+# environment — `pip install mininet` only provides the Python side.  Use the
+# `ymlei/openoptics:latest` Docker image for a ready-to-go setup.
+mininet = ["openoptics-dcn[dashboard]", "mininet>=2.3.0.dev6", "thrift>=0.22.0"]
+tofino  = ["paramiko", "tomli; python_version < '3.11'"]
+ns3     = []
+viz = ["matplotlib>=3.5"]
+dashboard = [
+    # Django 4.2 LTS is the newest line that still supports Python 3.8
+    # (which ships in the ymlei/openoptics Docker image).  Bump the lower
+    # bound when we drop 3.8 support.
+    "django>=4.2,<6",
+    "daphne",
+    "redis",
+    "channels",
+    "channels-redis",
+    "matplotlib>=3.5",
+    "Pillow",
+]
+dev = ["pytest", "build", "twine"]
+all = [
+    "openoptics-dcn[mininet,tofino,ns3,dashboard]",
 ]
 
+[tool.setuptools]
+# Top-level `examples/` and `tutorials/` live at the repo root for contributor
+# ergonomics, but we ship them inside the wheel under the openoptics namespace
+# via package-dir mapping so `openoptics-gen-examples` / `-gen-tutorials` can
+# locate them with importlib.resources.
+packages = [
+    "openoptics",
+    "openoptics._cli",
+    "openoptics.backends",
+    "openoptics.backends.mininet",
+    "openoptics.backends.ns3",
+    "openoptics.backends.tofino",
+    "openoptics.dashboard",
+    "openoptics.dashboard.dashboard",
+    "openoptics.dashboard.dashboardapp",
+    "openoptics.dashboard.dashboardapp.migrations",
+    "openoptics._bundled_examples",
+    "openoptics._bundled_tutorials",
+    "openoptics._bundled_tutorials.solutions",
+]
 
+[tool.setuptools.package-dir]
+"openoptics._bundled_examples" = "examples"
+"openoptics._bundled_tutorials" = "tutorials"
+"openoptics._bundled_tutorials.solutions" = "tutorials/solutions"
+
+[tool.setuptools.package-data]
+"openoptics.backends.mininet" = [
+    "p4src/**/*.json",
+    "p4src/**/*.p4",
+]
+"openoptics.backends.tofino" = [
+    "*.toml",
+    "p4_build.sh",
+    "emulated-ocs/**/*",
+    "openoptics-tor/**/*",
+]
+"openoptics.backends.ns3" = [
+    "src/**/*.cc",
+    "src/**/*.h",
+    "CMakeLists.txt",
+]
+"openoptics.dashboard.dashboardapp" = [
+    "templates/**/*.html",
+    "static/**/*",
+]
+"openoptics._bundled_examples" = [
+    "*.py",
+    "*.md",
+    "*.sh",
+    "*.pdf",
+    "*.toml",
+]
+"openoptics._bundled_tutorials" = [
+    "*.py",
+    "*.md",
+    "*.sh",
+    "*.pdf",
+    "*.toml",
+]
+"openoptics._bundled_tutorials.solutions" = [
+    "*.py",
+    "*.md",
+    "*.sh",
+    "*.pdf",
+    "*.toml",
+]
+
+[tool.setuptools.exclude-package-data]
+"*" = [
+    "__pycache__/*",
+    "*.pyc",
+    "*.local.toml",
+    "secrets.local.toml",
+    "core",       # leftover Linux coredumps from debugging runs
+    "*.core",
+]
+# BMv2 custom switch C++ source: compiled into /behavioral-model/targets/ during
+# the Docker image build and referenced at runtime by absolute path — never read
+# from the wheel. Keep it in the repo for contributors; don't ship it on PyPI.
+"openoptics.backends.mininet" = [
+    "targets/**",
+]

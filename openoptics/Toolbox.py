@@ -8,7 +8,14 @@
 # License text: Creative Commons NC BY SA 4.0
 # https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en
 
+import importlib
 import os
+import socket
+import subprocess
+import sys
+import time
+from pathlib import Path as FsPath
+
 import networkx as nx
 import openoptics.utils as utils
 from openoptics.backends import create_backend
@@ -144,17 +151,10 @@ class BaseNetwork:
             self.device_manager = None
 
         if self.use_webserver and self.device_manager is not None:
+            from openoptics.dashboard._bootstrap import bootstrap
             from openoptics.Dashboard import Dashboard
-            # Ensure Redis is running and DB migrations are applied
-            os.system("service redis-server start > /dev/null 2>&1")
-            os.system(
-                "python3 /openoptics/openoptics/dashboard/manage.py makemigrations dashboardapp"
-                " > /dev/null 2>&1"
-            )
-            os.system(
-                "python3 /openoptics/openoptics/dashboard/manage.py migrate"
-                " > /dev/null 2>&1"
-            )
+
+            bootstrap()
 
             self.dashboard = Dashboard(
                 self.slice_to_topo,
@@ -165,13 +165,39 @@ class BaseNetwork:
                 else self.nb_node,
             )
             self.dashboard.start()
-            os.system("pkill -f 'manage.py runserver' > /dev/null 2>&1")
-            os.system(
-                "python3 /openoptics/openoptics/dashboard/manage.py runserver localhost:8001"
-                " > /tmp/openoptics_dashboard.log 2>&1 &"
+
+            dashboard_pkg = importlib.import_module("openoptics.dashboard")
+            dashboard_root = FsPath(next(iter(dashboard_pkg.__path__)))
+            manage_py = dashboard_root / "manage.py"
+            log_path = "/tmp/openoptics_dashboard.log"
+            log_file = open(log_path, "wb")
+            self._runserver_proc = subprocess.Popen(
+                [sys.executable, str(manage_py), "runserver",
+                 "--noreload", "localhost:8001"],
+                stdout=log_file, stderr=subprocess.STDOUT,
+                cwd=str(dashboard_root),
             )
-            print("Access dashboard at http://localhost:8001")
-            #print("Dashboard log: /tmp/openoptics_dashboard.log")
+            self._runserver_log = log_file
+
+            bound = False
+            for _ in range(25):
+                if self._runserver_proc.poll() is not None:
+                    break
+                try:
+                    with socket.create_connection(("127.0.0.1", 8001), timeout=0.5):
+                        bound = True
+                        break
+                except OSError:
+                    time.sleep(0.2)
+
+            if bound:
+                print("Access dashboard at http://localhost:8001")
+            else:
+                exit_code = self._runserver_proc.poll()
+                print(
+                    f"Dashboard runserver did not bind localhost:8001 "
+                    f"(exit={exit_code}). See {log_path} for details."
+                )
 
     def start_cli(self):
         """
@@ -189,6 +215,15 @@ class BaseNetwork:
         """
         if self.use_webserver and hasattr(self, 'dashboard'):
             self.dashboard.stop()
+        if hasattr(self, '_runserver_proc') and self._runserver_proc.poll() is None:
+            self._runserver_proc.terminate()
+            try:
+                self._runserver_proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self._runserver_proc.kill()
+                self._runserver_proc.wait()
+        if hasattr(self, '_runserver_log'):
+            self._runserver_log.close()
         self._backend.stop()
 
     def create_nodes(self):

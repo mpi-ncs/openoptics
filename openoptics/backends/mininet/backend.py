@@ -19,7 +19,7 @@ import numpy as np
 
 from mininet.net import Mininet
 from mininet.topo import Topo
-from mininet.link import TCLink
+from mininet.link import TCIntf, TCLink
 from mininet.log import debug, error, info
 from mininet.moduledeps import pathCheck
 from mininet.node import Host, Switch
@@ -255,6 +255,30 @@ def _get_rtt_from_ping(node1, node2, interval=1, nb_pkt=10, timeout=1):
 # MininetBackend
 # ---------------------------------------------------------------------------
 
+class _QuietTCIntf(TCIntf):
+    # Set an explicit HTB quantum so the kernel skips its r2q-based sanity
+    # check and stops emitting "sch_htb: quantum of class X is big" warnings
+    # on high-rate links. 60000 bytes sits safely within HTB's [1000, 200000]
+    # range for any rate we use.
+    def bwCmds(self, bw=None, speedup=0, use_hfsc=False, use_tbf=False,
+               latency_ms=None, enable_ecn=False, enable_red=False):
+        cmds, parent = super().bwCmds(
+            bw=bw, speedup=speedup, use_hfsc=use_hfsc, use_tbf=use_tbf,
+            latency_ms=latency_ms, enable_ecn=enable_ecn, enable_red=enable_red,
+        )
+        for i, cmd in enumerate(cmds):
+            if 'classid 5:1 htb' in cmd:
+                cmds[i] = cmd + ' quantum 60000'
+        return cmds, parent
+
+
+class _QuietTCLink(TCLink):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('cls1', _QuietTCIntf)
+        kwargs.setdefault('cls2', _QuietTCIntf)
+        TCLink.__init__(self, *args, **kwargs)
+
+
 class MininetBackend(BackendBase):
     """Mininet + BMv2 backend for OpenOptics."""
 
@@ -386,7 +410,7 @@ class MininetBackend(BackendBase):
         print("Starting Mininet network...")
 
         self._net = Mininet(
-            topo, host=P4Host, switch=P4Switch, controller=None, link=TCLink
+            topo, host=P4Host, switch=P4Switch, controller=None, link=_QuietTCLink
         )
         self._net.staticArp()
 
