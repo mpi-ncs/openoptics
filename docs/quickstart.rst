@@ -1,105 +1,109 @@
 Quick Start
 ====================
 
+This guide walks through running the Mininet backend end-to-end in a Docker
+container. For the Tofino backend, see :doc:`tofino-backend`. For other
+install paths (plain ``pip install`` without Docker), see :doc:`installation`.
+
 Requirements
 --------------
-OS: Linux
+- Linux host with Docker installed
+- (Optional) SSH access if running on a remote machine, for the dashboard port-forward
 
-Connect to Your Remote Machine
---------------------------------------
+Step 1. Connect to your remote machine (if applicable)
+------------------------------------------------------
 
-If you're using a remote machine, set up port forwarding for viewing the OpenOptics dashboard.
+If you're running OpenOptics on a remote machine, forward the dashboard port
+so you can view it locally:
 
 .. code-block:: bash
 
    ssh -L localhost:8001:localhost:8001 YOUR_MACHINE
 
+Step 2. Pull the Docker image and enter the container
+-----------------------------------------------------
 
-Pull Docker Image and Clone Repository
--------------------------------------------
-
-.. code-block:: bash
-
-   sudo docker pull ymlei/openoptics:latest   
-   git clone https://github.com/mpi-ncs/openoptics.git
-
-Enter the OpenOptics Environment
----------------------------------
-
-Option A: With VS Code
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-1.	Open the folder `openoptics` with the VS Code Remote - Containers extension.
-2.	With Docker and the Dev Containers extension installed, press:
-	•	Ctrl+Shift+P (Windows/Linux)
-	•	Command+Shift+P (Mac)
-3.	Run **Dev Containers: Reopen in Container**.
-
-Option B: With Terminal
-^^^^^^^^^^^^^^^^^^^^^^^^
+The ``ymlei/openoptics:latest`` image has BMv2, Mininet, Redis, Thrift, and
+the P4 toolchain preinstalled — everything the Mininet backend needs at
+runtime.
 
 .. code-block:: bash
 
-   cd openoptics/
+   sudo docker pull ymlei/openoptics:latest
    sudo docker run --privileged -dit --network host \
-   --name openoptics \
-   -v "$PWD:/openoptics" \
-   ymlei/openoptics:latest /bin/bash
-
+        --name openoptics ymlei/openoptics:latest /bin/bash
    sudo docker exec -it openoptics bash
 
-Install the Project and Initialize the Dashboard
-------------------------------------------------
+VS Code's Dev Containers extension also works: clone this repo, then press
+**Ctrl+Shift+P** → **Dev Containers: Reopen in Container**.
+
+Step 3. Install OpenOptics
+--------------------------
+
+Inside the container (which drops you in ``/root``):
 
 .. code-block:: bash
 
-   cd /openoptics/
-   pip install -e .
-   
-   cd /openoptics/openoptics/dashboard
-   bash init.sh
+   pip install "openoptics-dcn[mininet]"
 
-You are all set!
+This pulls the Python package plus the Mininet-Python bindings, Thrift,
+Django, Daphne, Channels, and Redis client libraries.
 
-Start with an Example Script
-----------------------------
+Step 4. Seed a working directory
+--------------------------------
 
-Use the following commands to start a round-robin optical DCN with direct path routing:
+The installed package ships several helper CLIs that copy bundled content
+into your current directory:
 
 .. code-block:: bash
 
-   cd examples
-   python3 routing_direct_perhop.py
+   openoptics-gen-examples          # writes ./examples/
+   openoptics-gen-tutorials         # writes ./tutorials/  (optional)
 
-Then you can try ping in your optical DCN,
+Step 5. Run an example
+----------------------
 
 .. code-block:: bash
 
-   h0 ping h1
-   h2 ping h3
+   python3 examples/mininet_routing_direct_perhop.py
 
-Defining Your Own Optical DCN with Python APIs
-----------------------------------------------
+You should see OpenOptics set up Mininet, bring up the BMv2 optical switch
+and four ToR switches, deploy the topology and routing, and drop you into the
+OpenOptics CLI. From there:
+
+.. code-block:: bash
+
+   OpenOptics> h0 ping h1
+   OpenOptics> h2 ping h3
+
+Press ``Ctrl-D`` to exit; the network tears itself down.
+
+Defining your own optical DCN with the Python API
+-------------------------------------------------
 
 .. image:: ../assets/openoptics-diagram.png
    :alt: OpenOptics Diagram
 
-OpenOptics User APIs are located in ``openoptics/Toolbox.py``.
-This file defines a number of useful functions for creating optical topologies, delopying routings, and monitoring the network.
-Every OpenOptics network is a ``BaseNetwork`` object:
+OpenOptics user APIs live in :mod:`openoptics.Toolbox`.
+This module defines the primitives for creating optical topologies, deploying
+routing, and monitoring the network. Every OpenOptics network is a
+``BaseNetwork`` object:
 
 .. code-block:: python
+
+   from openoptics import Toolbox, OpticalTopo, OpticalRouting
 
    net = Toolbox.BaseNetwork(
        name="my_network",
        backend="Mininet",
-       nb_node = 4,
-       time_slice_duration_ms = 32, # in ms
-       use_webserver=True)
+       nb_node=4,
+       time_slice_duration_ms=32,   # in ms
+       use_webserver=True,
+   )
 
-The ``backend`` parameter selects the network simulator or hardware target (currently ``"Mininet"``).
-Backend-specific options are passed as extra keyword arguments and validated at construction time.
-For Mininet, ``link_delay_ms`` sets per-link propagation delay (default: 0):
+The ``backend`` parameter selects the target. Backend-specific options are
+passed as extra keyword arguments and validated at construction time. For
+Mininet, ``link_delay_ms`` sets per-link propagation delay (default: 0):
 
 .. code-block:: python
 
@@ -108,63 +112,63 @@ For Mininet, ``link_delay_ms`` sets per-link propagation delay (default: 0):
        backend="Mininet",
        nb_node=4,
        time_slice_duration_ms=32,
-       link_delay_ms=1,         # 1 ms propagation delay (Mininet-specific)
-       use_webserver=True)
+       link_delay_ms=1,             # 1 ms propagation delay (Mininet-specific)
+       use_webserver=True,
+   )
 
-You can use ``connect(node1,port1,node2,port2,time_slice)`` to connect ports of two nodes at the given time slice.
+Use ``connect(node1, port1, node2, port2, time_slice)`` to wire ports
+explicitly:
 
 .. code-block:: python
 
-   net.connect(node1=0,port1=0,node2=1,port2=0,time_slice=0)
-   net.connect(node1=2,port1=0,node2=3,port2=0,time_slice=0)
-   net.connect(node1=0,port1=0,node2=2,port2=0,time_slice=1)
-   net.connect(node1=1,port1=0,node2=3,port2=0,time_slice=1)
+   net.connect(node1=0, port1=0, node2=1, port2=0, time_slice=0)
+   net.connect(node1=2, port1=0, node2=3, port2=0, time_slice=0)
+   net.connect(node1=0, port1=0, node2=2, port2=0, time_slice=1)
+   net.connect(node1=1, port1=0, node2=3, port2=0, time_slice=1)
    net.deploy_topo()
 
-Or you can use provided high-level topology generators:
+Or use the high-level topology generators:
 
 .. code-block:: python
 
    circuits = OpticalTopo.round_robin(nb_node=8)
    net.deploy_topo(circuits)
 
-or
-
 .. code-block:: python
 
-   circuits = OpticalTopo.opera(nb_node = 8, nb_link=2)
+   circuits = OpticalTopo.opera(nb_node=8, nb_link=2)
    net.deploy_topo(circuits)
 
-Next, you can define routing by adding time-flow table entries (as forwarding tables in eletrical DCNs) ``add_time_flow_entry(node_id, entries, routing_mode)``.
-Or use provided high-level routing generators:
+Define routing with ``add_time_flow_entry(node_id, entries, routing_mode)``
+or use the high-level routing generators:
 
 .. code-block:: python
 
    paths = OpticalRouting.routing_direct(net.get_topo())
    net.deploy_routing(paths, routing_mode="Per-hop")
 
-Once you have created a ``BaseNetwork`` object, and defined its topology and routing, start the network by simply calling ``net.start()``.
-Now run your Python file and your first optical DCN is deployed!
+Once you have defined topology and routing, start the network with
+``net.start()``. This launches the OpenOptics CLI (an extension of Mininet's
+CLI) with commands for querying queue depths, loss rates, and more.
 
-``net.start()`` launches a command line interface defined in ``src/OpticalCLI.py``.
-This CLI is an extension of Mininet's CLI, with added support for optical DCNs, e.g. to query the number of queued packets in switches and the network's packet loss rate. 
+You can find more example scripts in ``./examples/`` after running
+``openoptics-gen-examples``, or browse them in the repository at `examples/
+<https://github.com/mpi-ncs/openoptics/tree/release/examples>`_.
 
-You could find example scripts configuring different architectures under ``openoptics/examples/``
-
-Monitor with OpenOptics Dashboard
----------------------------------
+Monitor with the OpenOptics Dashboard
+-------------------------------------
 
 .. image:: ../assets/dashboard.png
    :alt: OpenOptics Dashboard
 
-To configure the OpenOptics web dashboard, navigate to ``src/dashboard`` and run:
+The dashboard starts automatically when you create a ``BaseNetwork`` with
+``use_webserver=True`` (the default): Redis is launched, Django migrations are
+applied, and the runserver binds ``localhost:8001`` — all in-process. Visit
+http://localhost:8001 in your browser to view the live topology and realtime
+performance graphs (served over WebSockets).
+
+If you're on a remote machine, remember to tunnel the port:
 
 .. code-block:: bash
 
-   bash init.sh
-
-Make sure to set ``use_webserver`` to true when creating your ``BaseNetwork`` object. 
-In your web browser, visit http://localhost:8001 to view the dashboard.
-The dashboard displays the network topology, along with realtime graphs of network performance served via WebSockets. 
-
-Note: If you're running OpenOptics at a remote machine, make sure to enable port forwarding by passing ``-L localhost:8001:localhost:8001`` to ssh.
+   ssh -L localhost:8001:localhost:8001 YOUR_MACHINE

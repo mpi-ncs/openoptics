@@ -504,10 +504,28 @@ class TofinoDeployer:
     _UPLOAD_SKIP = {"openoptics_tor", "ocs", ".git"}
 
     def _upload_dir(self, ssh, local_dir: Path, remote_dir: str) -> None:
-        """Recursively upload a local directory to the remote host via SFTP."""
-        # Wait for mkdir to complete before starting SFTP
-        stdin, stdout, stderr = ssh.exec_command(f"mkdir -p {remote_dir}")
-        stdout.channel.recv_exit_status()
+        """Recursively upload a local directory to the remote host via SFTP.
+
+        Pre-cleans `remote_dir` so a previous deploy's leftover files
+        (possibly owned by `root` if a former run used `sudo`) don't trigger
+        EACCES on `sftp.put`. We only `sudo rm -rf` paths under
+        ``/tmp/openoptics`` to keep the blast radius bounded — anything else
+        falls back to a plain (unprivileged) cleanup.
+        """
+        if remote_dir.startswith("/tmp/openoptics/"):
+            cleanup = (
+                f"sudo rm -rf {remote_dir} && mkdir -p {remote_dir} && "
+                f"sudo chown -R $(id -un):$(id -gn) {remote_dir}"
+            )
+        else:
+            cleanup = f"rm -rf {remote_dir} && mkdir -p {remote_dir}"
+        stdin, stdout, stderr = ssh.exec_command(cleanup)
+        rc = stdout.channel.recv_exit_status()
+        if rc != 0:
+            err = stderr.read().decode(errors="replace").strip()
+            raise RuntimeError(
+                f"Failed to prepare remote dir {remote_dir} (exit {rc}): {err}"
+            )
         sftp = ssh.open_sftp()
         try:
             self._sftp_put_dir(sftp, local_dir, remote_dir)

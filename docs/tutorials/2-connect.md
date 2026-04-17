@@ -27,7 +27,7 @@ You will:
 
 This schedule guarantees that, over a period of time, each node can directly communicate with all other nodes.
 
-You will implement your solution in `openoptics/tutorial/2-connect.py`.
+You will implement your solution in `tutorials/2-connect.py`.
 Run the script to generate and visualize your topology schedule on the dashboard:
 
 ```python

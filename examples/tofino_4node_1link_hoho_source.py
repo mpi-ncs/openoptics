@@ -16,10 +16,7 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger("paramiko").setLevel(logging.WARNING)
 
 if __name__ == "__main__":
-    config_file = os.path.join(
-        os.path.dirname(__file__),
-        "..", "openoptics", "backends", "tofino", "config_4tor.local.toml",
-    )
+    config_file = os.environ.get("OPENOPTICS_CONFIG", "openoptics-tofino.toml")
 
     nb_node = 4
     nb_link = 1

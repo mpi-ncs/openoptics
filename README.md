@@ -1,5 +1,5 @@
 <div align="center">
-<img alt="OpenOptics" src="assets/openoptics_words.svg" width=20%>
+<img alt="OpenOptics" src="https://raw.githubusercontent.com/mpi-ncs/openoptics/main/assets/openoptics_words.svg" width=20%>
 <h3>
 Easy design, testing, and deployment of optical datacenter networks for everyone
 </h3>
@@ -25,56 +25,80 @@ OpenOptics is a general framework for realizing different optical data center ne
 With OpenOptics, users can deploy customized optical data center networks on the testbed, emulation, or simulation with ~10 lines of python code.
 Under the hood, user configurations are converted to control plane programs and deployed to the underlining OCSes and P4 switches.
 
-We have now published the Mininet backend, where users can realize optical DCNs in a full software emulation using BMv2 software switches and Mininet networks.
-The Tofino-based backend will be released soon.
+Supported backends:
+- **Mininet** — full software emulation using BMv2 software switches and Mininet networks.
+- **Tofino** — deployment on Intel Tofino2 programmable switches (SDE 9.12.0). See [docs/tofino-backend.md](docs/tofino-backend.md).
+- **ns-3** — packet-level simulation (scaffold; under active development).
 
 # Quick Start
 
-## Connect to Your Remote Machine
-If you're using a remote machine, set up port forwarding for viewing the OpenOptics dashboard.
-```
+OpenOptics has two installation paths — pick the one that matches the backend
+you need.
+
+## For the Mininet backend: Docker image + `pip install`
+
+The `ymlei/openoptics:latest` image ships a fully built BMv2, Mininet, Redis,
+and all native dependencies. Add the Python package on top with pip.
+
+```bash
+# If you're on a remote machine, forward the dashboard port first:
 ssh -L localhost:8001:localhost:8001 YOUR_MACHINE
-```
 
-## Get Pre-Build Docker Images and Project Code
-Install [docker](https://docs.docker.com/engine/install/) if you haven't already.
-Then clone the project repo and pull the pre-build development Docker image.
-```
-git clone https://github.com/mpi-ncs/openoptics.git
+# Pull and enter the container:
 sudo docker pull ymlei/openoptics:latest
-```
-
-## Enter OpenOptics Environment with VS Code
-
-Open folder `openoptics` with VSCode remote extension.
-With Docker and the VS Code Dev Containers extension installed, simply press Ctrl+Shift+P or Command+Shift+P (Mac) in your VS Code and run the “Dev Containers: Reopen in Container” command to open the repository inside the container. After that, OpenOptics is ready to go.
-
-## Or Enter OpenOptics Environment with Bash
-```
-cd openoptics/
-sudo docker run --privileged -dit --network host \
-  --name openoptics \
-  -v "$PWD:/openoptics" \
-  ymlei/openoptics:latest /bin/bash
+sudo docker run --privileged -dit --network host --name openoptics \
+     ymlei/openoptics:latest /bin/bash
 sudo docker exec -it openoptics bash
+
+# Inside the container:
+pip install "openoptics-dcn[mininet]"
+openoptics-gen-examples          # copies ./examples/ into cwd
+python3 examples/mininet_routing_direct_perhop.py
 ```
 
-## Build Docker Image or Build from Source
-Build the docker image or from source is also doable. Please refer to the [instructions](build_image_or_from_source.md) for more details.
+The dashboard (Redis + Django migrations + runserver) starts automatically when your script creates a `BaseNetwork` with `use_webserver=True` (the default).
+
+Then try `h0 ping h1` / `h2 ping h3` inside the OpenOptics CLI.
+
+VS Code Dev Containers also works — Ctrl+Shift+P → "Dev Containers: Reopen in
+Container" after `git clone`ing this repo (`.devcontainer/` wires up the same
+image).
+
+If you'd rather build the image yourself or install editable from source,
+see the [build-from-source section in `docs/installation.md`](docs/installation.md#advanced-build-from-source).
+
+## For the Tofino backend: `pip install` (no Docker)
+
+The Tofino backend only needs Python on your workstation — the heavy
+dependencies (Intel SDE, P4 compiler) live on the switches and are invoked
+over SSH.
+
+```bash
+pip install "openoptics-dcn[tofino]"
+openoptics-gen-config            # writes ./openoptics-tofino.toml
+# edit the placeholders (USER, jumphost.example.com, IPs, MACs), then run
+# a Tofino example — see docs/tofino-backend.md for a full walkthrough.
+```
+
+See [docs/tofino-backend.md](docs/tofino-backend.md) for prerequisites and
+config details.
+
+## Bundled resources (all installs)
+
+After `pip install`, these commands seed your working directory:
+
+```bash
+openoptics-gen-examples          # examples/
+openoptics-gen-tutorials         # tutorials/
+openoptics-gen-config            # openoptics-tofino.toml (Tofino config template)
+```
 
 # Usage
 
 ## With Example Scripts
 
-Initialize the Dashboard:
 ```
-cd openoptics
-bash ./openoptics/dashboard/init.sh
-```
-
-Use the following commands to start a round-robin optical DCN with direct path routing:
-```
-python3 examples/routing_direct_perhop.py
+python3 examples/mininet_routing_direct_perhop.py
 ```
 Then you can try ping in your optical DCN,
 ```
@@ -84,7 +108,7 @@ h2 ping h3
 
 ## Defining Your Own Optical DCN with Python APIs
 
-![OpenOptics Diagram](assets/openoptics-diagram.png)
+![OpenOptics Diagram](https://raw.githubusercontent.com/mpi-ncs/openoptics/main/assets/openoptics-diagram.png)
 
 OpenOptics User APIs are located in `openoptics/Toolbox.py`.
 This file defines a number of useful functions for creating optical topologies, deploying routing, and monitoring the network.
@@ -132,17 +156,13 @@ Now run your Python file and your first optical DCN is deployed!
 `net.start()` launches a command line interface defined in `src/OpticalCLI.py`.
 This CLI is an extension of Mininet's CLI, with added support for optical DCNs, e.g. to query the number of queued packets in switches and the network's packet loss rate. 
 
-You could find example scripts configuring different architectures under `openoptics/examples/`
+You can find example scripts configuring different architectures under [examples/](examples/) — or, after `pip install`, run `openoptics-gen-examples` to copy them into your current directory.
 
 ## Monitor with OpenOptics Dashboard
 
-![OpenOptics Dashboard](assets/dashboard.png)
+![OpenOptics Dashboard](https://raw.githubusercontent.com/mpi-ncs/openoptics/main/assets/dashboard.png)
 
-To configure the OpenOptics web dashboard, if you haven't, navigate to `openoptics/dashboard` and run:
-```
-bash init.sh
-```
-Make sure to set `use_webserver` to true when creating your `BaseNetwork` object. 
+The dashboard starts automatically when you create a `BaseNetwork` with `use_webserver=True` (the default) — Redis is launched and Django migrations are applied in-process, so no separate setup step is needed.
 In your web browser, visit http://0.0.0.0:8001 to view the dashboard.
 The dashboard displays the network topology, along with realtime graphs of network performance served via WebSockets. 
 

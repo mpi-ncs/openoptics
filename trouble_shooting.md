@@ -14,9 +14,8 @@ These error messages indicate that either:
 - The Redis server is not running
 - The database has not been initialized
 
-To resolve these issues, run the initialization script:
-
-```bash
-cd openoptics
-bash ./openoptics/dashboard/init.sh
-``
+`BaseNetwork.start()` now runs Redis + Django migrations in-process whenever
+`use_webserver=True`, so these should be rare. If you still see them, check
+that `redis-server` is installed (`apt-get install redis-server`) and that
+the dashboard log at `/tmp/openoptics_dashboard.log` doesn't show a Django
+error.

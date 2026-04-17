@@ -5,8 +5,9 @@ direct link, the source ToR picks a random uplink port via Tofino's Random<>
 primitive.  The intermediate ToR resolves the final hop via
 cal_port_slice_to_node.
 
-Requires config_4tor_2link.local.toml (2 OCS uplinks per ToR) so that Random<>
-has a meaningful choice between port 0 and port 1.
+Expects ./openoptics-tofino.toml in cwd with 2 OCS uplinks per ToR (adjust
+`tor_ocs_port_pairs`) so that Random<> has a meaningful choice between
+port 0 and port 1. Override the path with OPENOPTICS_CONFIG=/path/to/cfg.toml.
 """
 
 import logging
@@ -18,10 +19,7 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger("paramiko").setLevel(logging.WARNING)
 
 if __name__ == "__main__":
-    config_file = os.path.join(
-        os.path.dirname(__file__),
-        "..", "openoptics", "backends", "tofino", "config_4tor_2link.local.toml",
-    )
+    config_file = os.environ.get("OPENOPTICS_CONFIG", "openoptics-tofino.toml")
 
     nb_node = 4
     nb_link = 2

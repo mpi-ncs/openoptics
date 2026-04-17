@@ -27,13 +27,13 @@ which are then deployed to the underlying optical and P4-programmable switches.
 .. code-block:: python
 
    from openoptics import Toolbox, OpticalTopo, OpticalRouting
-   
-   nb_node = 8
-   net = Toolbox.BaseNetwork(nb_node = nb_node, time_slice_duration_ms = 512, backend="Mininet")
+
+   net = Toolbox.BaseNetwork(name="demo", backend="Mininet",
+                             nb_node=8, time_slice_duration_ms=512)
    circuits = OpticalTopo.round_robin(nb_node=nb_node)
    net.deploy_topo(circuits)
    paths = OpticalRouting.routing_direct(net.get_topo())
-   net.deploy_routing(paths)
+   net.deploy_routing(paths, routing_mode="Per-hop")
    net.start()
 
 After deployment, users can monitor the network with OpenOptics Dashboard.
@@ -50,9 +50,9 @@ deploys the same Python code onto real Tofino2 hardware.
 
    quickstart
    installation
+   tofino-backend
    examples/examples
    tutorials/tutorial_index
-   tofino-backend
    apis_index
    about
 

@@ -4,7 +4,9 @@ Interactive counterpart of ``tests/tofino_4node_2link_direct_test.py``: same
 backend, topology, routing, slice duration, and config — but after deployment
 it opens the OpenOptics CLI instead of running a scripted ping.
 
-Physical wiring (openoptics/backends/tofino/config_4tor_2link.local.toml):
+Physical wiring (expects ./openoptics-tofino.toml in cwd — for 2-uplink
+testbeds, adjust `tor_ocs_port_pairs` to list two ports per ToR. Override
+the path with OPENOPTICS_CONFIG=/path/to/cfg.toml):
   Each logical ToR has 2 OCS uplinks on the SAME Tofino pipe:
     pipe 1 = ToR 0 (server cage 1/0, uplinks 7/0 + 8/0)
     pipe 2 = ToR 1 (server cage 9/0, uplinks 15/0 + 16/0)
@@ -38,10 +40,7 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger("paramiko").setLevel(logging.WARNING)
 
 if __name__ == "__main__":
-    config_file = os.path.join(
-        os.path.dirname(__file__),
-        "..", "openoptics", "backends", "tofino", "config_4tor_2link.local.toml",
-    )
+    config_file = os.environ.get("OPENOPTICS_CONFIG", "openoptics-tofino.toml")
 
     nb_node = 4
     nb_link = 2

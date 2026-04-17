@@ -1,4 +1,4 @@
-# Tofino Hardware Backend
+# Tofino Backend
 
 OpenOptics supports deployment on programmable switches (Tofino). The Tofino
 backend exposes the same Python API as the Mininet backend — the optical-DCN
@@ -52,26 +52,20 @@ Examples live under `examples/`: `tofino_4node_1link_direct.py`,
 
 ### 2.2 Quick start
 
-Before the first run, render a private config with your testbed's real
-hostnames, IPs, and MACs (see [§2.3](#23-config-file) for details):
+Install the package and generate a config template in your project directory:
 
 ```bash
-cd openoptics/backends/tofino
-cp secrets.local.toml.example secrets.local.toml
-# edit secrets.local.toml with your values
-python3 apply_secrets.py    # writes config_*.local.toml
+pip install "openoptics-dcn[tofino]"
+cd ~/my-testbed
+openoptics-gen-config                 # writes ./openoptics-tofino.toml
+# edit openoptics-tofino.toml to fill in USER, jumphost.example.com,
+# IPs, MACs, etc. for your testbed (see §2.3)
 ```
 
-Then use the generated `.local.toml` as the `config_file`:
+Then reference that file as `config_file=` in your deployment script:
 
 ```python
 from openoptics import Toolbox, OpticalTopo, OpticalRouting
-import os
-
-config_file = os.path.join(
-    os.path.dirname(__file__),
-    "..", "openoptics", "backends", "tofino", "config_4tor_2link.local.toml",
-)
 
 net = Toolbox.BaseNetwork(
     name="tofino_4node_2link_direct",
@@ -79,7 +73,7 @@ net = Toolbox.BaseNetwork(
     nb_node=4,
     nb_link=2,
     time_slice_duration_us=50,
-    config_file=config_file,
+    config_file="openoptics-tofino.toml",
 )
 
 circuits = OpticalTopo.opera(nb_node=4, nb_link=2, guardband=True)
@@ -91,12 +85,16 @@ net.deploy_routing(paths, routing_mode="Per-hop")
 net.start()   # opens the OpenOptics CLI
 ```
 
-Run from inside the dev container:
+You can also grab a bundled Tofino example to start from:
 
 ```bash
-sudo docker exec -w /openoptics/examples openoptics bash -c \
-  "python3 tofino_4node_2link_direct.py"
+openoptics-gen-examples                    # copies examples/ into cwd
+python3 examples/tofino_4node_2link_direct.py
 ```
+
+The Tofino backend does not require the OpenOptics Docker image — your
+workstation only needs Python, since the SDE and P4 toolchain live on the
+switches and are invoked over SSH.
 
 In the CLI:
 
@@ -111,51 +109,51 @@ processes (`pkill -9`).
 
 ### 2.3 Config file
 
-The backend reads a TOML config passed via `config_file=`. Two committed
-templates in `openoptics/backends/tofino/` cover the common shapes:
-
-- `config_4tor.toml` — one physical Tofino2 hosting 4 logical ToRs, 1 uplink
-  each.
-
-  ```
-  tor-switch-1 (Tofino2, one pipe per logical ToR)        ocs-switch (Tofino2)
-  ┌──────────────────────────────────────────────┐        ┌──────────────┐
-  │ server1 ── 1/0  ┌─ ToR0 (pipe 1) ──  7/0 ────┼────────┼─ 7/0         │
-  │ server2 ── 9/0  ├─ ToR1 (pipe 2) ── 15/0 ────┼────────┼─ 15/0        │
-  │                 ├─ ToR2 (pipe 3) ── 23/0 ────┼────────┼─ 23/0        │
-  │                 └─ ToR3 (pipe 0) ── 31/0 ────┼────────┼─ 31/0        │
-  └──────────────────────────────────────────────┘        └──────────────┘
-  ```
-
-- `config_4tor_2link.toml` — same, with 2 uplinks per ToR.
-
-  ```
-  tor-switch-1 (Tofino2)                                  ocs-switch (Tofino2)
-  ┌──────────────────────────────────────────────┐        ┌──────────────┐
-  │ server1 ── 1/0  ┌─ ToR0 ──  7/0, 8/0 ────────┼────────┼─ 7/0,  8/0   │
-  │ server2 ── 9/0  ├─ ToR1 ── 15/0, 16/0 ───────┼────────┼─ 15/0, 16/0  │
-  │                 ├─ ToR2 ── 23/0, 24/0 ───────┼────────┼─ 23/0, 24/0  │
-  │                 └─ ToR3 ── 31/0, 32/0 ───────┼────────┼─ 31/0, 32/0  │
-  └──────────────────────────────────────────────┘        └──────────────┘
-  ```
-
-Both ship with **placeholder** hostnames, IPs, and MACs so they are safe to
-keep in a public repository. To deploy against a real testbed, supply the
-secret values through a private overlay:
+The backend reads a TOML config passed via `config_file=`. The easiest way to
+start is:
 
 ```bash
-cd openoptics/backends/tofino
-cp secrets.local.toml.example secrets.local.toml   # fill in your testbed
-python3 apply_secrets.py                           # generates *.local.toml
+openoptics-gen-config                  # writes ./openoptics-tofino.toml
+openoptics-gen-config -o my.toml       # different destination
+openoptics-gen-config --force          # overwrite an existing file
 ```
 
-`apply_secrets.py` reads `secrets.local.toml` and writes
-`config_4tor.local.toml` and `config_4tor_2link.local.toml` next to the
-templates. Both the secrets file and the generated `.local.toml` files are
-listed in `.gitignore` and never leave your machine. Pass a `.local.toml` as
-`config_file=` in your deployment script.
+`openoptics-gen-config` copies the bundled template (a 4-ToR / 1-uplink
+topology) into your working directory. Edit it in place with your testbed's
+real hostnames, IPs, and MACs. The file contains **placeholder** values like
+`USER`, `jumphost.example.com`, `OCS_SWITCH_IP`, `aa:bb:cc:dd:ee:01`,
+`10.0.0.1` — search-and-replace those with real values before deploying.
 
-The templates look like this (key sections, 2-link 4-ToR shown):
+The default template describes the following layout:
+
+```
+tor-switch-1 (Tofino2, one pipe per logical ToR)        ocs-switch (Tofino2)
+┌──────────────────────────────────────────────┐        ┌──────────────┐
+│ server1 ── 1/0  ┌─ ToR0 (pipe 1) ──  7/0 ────┼────────┼─ 7/0         │
+│ server2 ── 9/0  ├─ ToR1 (pipe 2) ── 15/0 ────┼────────┼─ 15/0        │
+│                 ├─ ToR2 (pipe 3) ── 23/0 ────┼────────┼─ 23/0        │
+│                 └─ ToR3 (pipe 0) ── 31/0 ────┼────────┼─ 31/0        │
+└──────────────────────────────────────────────┘        └──────────────┘
+```
+
+For a 2-uplinks-per-ToR testbed, start from the same template
+(`openoptics-tofino.toml`) and duplicate each `tor_ocs_port_pairs` entry to
+list both uplink port pairs per ToR:
+
+```
+tor-switch-1 (Tofino2)                                  ocs-switch (Tofino2)
+┌──────────────────────────────────────────────┐        ┌──────────────┐
+│ server1 ── 1/0  ┌─ ToR0 ──  7/0, 8/0 ────────┼────────┼─ 7/0,  8/0   │
+│ server2 ── 9/0  ├─ ToR1 ── 15/0, 16/0 ───────┼────────┼─ 15/0, 16/0  │
+│                 ├─ ToR2 ── 23/0, 24/0 ───────┼────────┼─ 23/0, 24/0  │
+│                 └─ ToR3 ── 31/0, 32/0 ───────┼────────┼─ 31/0, 32/0  │
+└──────────────────────────────────────────────┘        └──────────────┘
+```
+
+Your filled-in config file should never be checked into a public repo — add
+it to your project's `.gitignore`.
+
+The template looks like this (key sections, 4-ToR / 1-uplink shown):
 
 ```toml
 [sde]
