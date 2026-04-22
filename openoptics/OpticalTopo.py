@@ -466,7 +466,8 @@ def get_nb_links_from_circuits(circuits: list):
 
 def draw_topo(slice_to_topo):
     """
-    Draw the topology using matplotlib.
+    Draw the topology using matplotlib in a style that matches the dashboard
+    card UI (indigo accent, slate text/edges, no axes, system-ish font).
 
     Args:
         slice_to_topo: Dictionary mapping time slices to topology graphs
@@ -475,39 +476,79 @@ def draw_topo(slice_to_topo):
         matplotlib figure object
     """
     import matplotlib.pyplot as plt
+
+    # Palette pulled from the dashboard CSS so the topology image reads as
+    # part of the same UI, not a separate matplotlib surface.
+    CARD_BG       = "#ffffff"
+    NODE_FILL     = "#1e3a8a"   # blue-900 — related to the sidebar navy but
+                                # distinctly blue rather than slate.
+    NODE_BORDER   = "#1e40af"   # blue-800
+    EDGE_COLOR    = "#94a3b8"   # slate-400
+    LABEL_COLOR   = "#ffffff"
+    TITLE_COLOR   = "#64748b"   # --text-muted
+    # Matplotlib renders the PNG server-side; don't try to pick up the
+    # browser's system-font stack — it won't find those and spews warnings
+    # per text element. Stick with matplotlib's always-available default.
+    FONT_FAMILY   = "DejaVu Sans"
+
     nb_time_slices = len(slice_to_topo)
     pos = nx.circular_layout(sorted(slice_to_topo[0].nodes))
 
     xs = [p[0] for p in pos.values()]
     ys = [p[1] for p in pos.values()]
-    pad = 0.15
+    pad = 0.25
     xlim = (min(xs) - pad, max(xs) + pad)
     ylim = (min(ys) - pad, max(ys) + pad)
 
-    fig, axs = plt.subplots(1, nb_time_slices)
+    fig, axs = plt.subplots(
+        1, nb_time_slices,
+        figsize=(3.4 * nb_time_slices, 3.4),
+        constrained_layout=True,
+    )
+    fig.patch.set_facecolor(CARD_BG)
 
     if nb_time_slices == 1:
         axs = [axs]
 
+    node_size = 1100  # passed to both nodes and edges so arrow heads stop
+                      # at the actual node boundary, not the default 300.
     for time_slice, ax in enumerate(axs):
-        nx.draw(
+        ax.set_facecolor(CARD_BG)
+        nx.draw_networkx_edges(
             slice_to_topo[time_slice],
-            ax=ax,
-            pos=pos,
-            with_labels=True,
-            node_color="#6A9FB5",
-            edge_color="#95A5A6",
-            arrowsize=5,
-            arrowstyle="->",
-            font_color="white",
+            pos=pos, ax=ax,
+            node_size=node_size,
+            edge_color=EDGE_COLOR,
+            width=2.0,
+            arrowsize=22,
+            arrowstyle="-|>",
+            alpha=0.9,
         )
-        ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
-        ax.axis("on")
-        ax.set_xlim(*xlim)           # <-- fixed viewport
-        ax.set_ylim(*ylim)           # <-- fixed viewport
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_title(f"time slice={time_slice}")
+        nx.draw_networkx_nodes(
+            slice_to_topo[time_slice],
+            pos=pos, ax=ax,
+            node_color=NODE_FILL,
+            edgecolors=NODE_BORDER,
+            linewidths=1.5,
+            node_size=node_size,
+        )
+        nx.draw_networkx_labels(
+            slice_to_topo[time_slice],
+            pos=pos, ax=ax,
+            font_color=LABEL_COLOR,
+            font_family=FONT_FAMILY,
+            font_size=13,
+            font_weight="semibold",
+        )
+        ax.set_xlim(*xlim)
+        ax.set_ylim(*ylim)
+        ax.set_aspect("equal")
+        ax.set_axis_off()
+        ax.set_title(
+            f"time slice {time_slice}",
+            color=TITLE_COLOR,
+            fontdict={"family": FONT_FAMILY, "size": 10, "weight": "semibold"},
+            pad=6,
+        )
 
-    fig.set_size_inches(3 * nb_time_slices, 3)
     return fig

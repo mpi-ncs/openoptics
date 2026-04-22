@@ -317,6 +317,7 @@ class MininetBackend(BackendBase):
         self._net: Mininet = None
         self._ip_to_tor: dict = {}
         self._tor_switches: list = []  # list[SwitchHandle]
+        self._optical_switches: list = []  # list[SwitchHandle]
 
     # ------------------------------------------------------------------
     # BackendBase interface
@@ -422,10 +423,12 @@ class MininetBackend(BackendBase):
 
         self._net.start()
 
-        # Cache ToR switch handles
+        # Cache ToR + optical switch handles
         for switch in self._net.switches:
             if switch.switch_type() == "tor":
                 self._tor_switches.append(SwitchHandle(switch.name, switch.thrift_port))
+            elif switch.switch_type() == "optical":
+                self._optical_switches.append(SwitchHandle(switch.name, switch.thrift_port))
 
     def get_switch(self, name: str) -> SwitchHandle:
         node = self._net.nameToNode[name]
@@ -436,6 +439,9 @@ class MininetBackend(BackendBase):
 
     def get_tor_switches(self) -> list:
         return self._tor_switches
+
+    def get_optical_switches(self) -> list:
+        return self._optical_switches
 
     def get_ip_to_tor(self) -> dict:
         return self._ip_to_tor

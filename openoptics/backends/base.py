@@ -112,6 +112,14 @@ class BackendBase(ABC):
     def get_tor_switches(self) -> list:
         """Return a list of SwitchHandle for all ToR switches."""
 
+    def get_optical_switches(self) -> list:
+        """Return a list of SwitchHandle for all optical (OCS) switches.
+
+        Default returns ``[]`` so backends without OCS device-plane telemetry
+        need no override.
+        """
+        return []
+
     @abstractmethod
     def get_ip_to_tor(self) -> dict:
         """Return the {ip_str: tor_id} mapping populated during setup."""

@@ -5,7 +5,11 @@
       "id" : 0,
       "fields" : [
         ["tmp", 32, false],
-        ["tmp_0", 32, false]
+        ["tmp_0", 32, false],
+        ["tmp_1", 32, false],
+        ["tmp_2", 32, false],
+        ["metadata.hit", 1, false],
+        ["_padding_0", 7, false]
       ]
     },
     {
@@ -124,7 +128,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "ocs.p4",
-        "line" : 171,
+        "line" : 193,
         "column" : 8,
         "source_fragment" : "MyDeparser"
       },
@@ -139,7 +143,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "ocs.p4",
-        "line" : 125,
+        "line" : 139,
         "column" : 48,
         "source_fragment" : "port_counter"
       },
@@ -147,11 +151,35 @@
       "is_direct" : false
     },
     {
-      "name" : "MyEgress.port_counter",
+      "name" : "MyIngress.ocs_hit_counter",
       "id" : 1,
       "source_info" : {
         "filename" : "ocs.p4",
-        "line" : 148,
+        "line" : 140,
+        "column" : 38,
+        "source_fragment" : "ocs_hit_counter"
+      },
+      "size" : 512,
+      "is_direct" : false
+    },
+    {
+      "name" : "MyIngress.ocs_miss_counter",
+      "id" : 2,
+      "source_info" : {
+        "filename" : "ocs.p4",
+        "line" : 141,
+        "column" : 38,
+        "source_fragment" : "ocs_miss_counter"
+      },
+      "size" : 512,
+      "is_direct" : false
+    },
+    {
+      "name" : "MyEgress.port_counter",
+      "id" : 3,
+      "source_info" : {
+        "filename" : "ocs.p4",
+        "line" : 170,
         "column" : 48,
         "source_fragment" : "port_counter"
       },
@@ -175,6 +203,25 @@
       "runtime_data" : [],
       "primitives" : [
         {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata.hit"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x01"
+            }
+          ],
+          "source_info" : {
+            "filename" : "ocs.p4",
+            "line" : 112,
+            "column" : 8,
+            "source_fragment" : "meta.hit = 1"
+          }
+        },
+        {
           "op" : "mark_to_drop",
           "parameters" : [
             {
@@ -184,7 +231,7 @@
           ],
           "source_info" : {
             "filename" : "ocs.p4",
-            "line" : 100,
+            "line" : 113,
             "column" : 8,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           }
@@ -206,6 +253,25 @@
           "parameters" : [
             {
               "type" : "field",
+              "value" : ["scalars", "metadata.hit"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x01"
+            }
+          ],
+          "source_info" : {
+            "filename" : "ocs.p4",
+            "line" : 117,
+            "column" : 8,
+            "source_fragment" : "meta.hit = 1"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
               "value" : ["standard_metadata", "egress_spec"]
             },
             {
@@ -215,7 +281,7 @@
           ],
           "source_info" : {
             "filename" : "ocs.p4",
-            "line" : 104,
+            "line" : 118,
             "column" : 8,
             "source_fragment" : "standard_metadata.egress_spec = port"
           }
@@ -223,30 +289,8 @@
       ]
     },
     {
-      "name" : "ocs134",
+      "name" : "ocs151",
       "id" : 3,
-      "runtime_data" : [],
-      "primitives" : [
-        {
-          "op" : "mark_to_drop",
-          "parameters" : [
-            {
-              "type" : "header",
-              "value" : "standard_metadata"
-            }
-          ],
-          "source_info" : {
-            "filename" : "ocs.p4",
-            "line" : 134,
-            "column" : 12,
-            "source_fragment" : "mark_to_drop(standard_metadata)"
-          }
-        }
-      ]
-    },
-    {
-      "name" : "ocs130",
-      "id" : 4,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -276,7 +320,145 @@
           ],
           "source_info" : {
             "filename" : "ocs.p4",
-            "line" : 130,
+            "line" : 151,
+            "column" : 38,
+            "source_fragment" : "(bit<32>)standard_metadata.ingress_port"
+          }
+        },
+        {
+          "op" : "count",
+          "parameters" : [
+            {
+              "type" : "counter_array",
+              "value" : "MyIngress.ocs_hit_counter"
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "ocs.p4",
+            "line" : 151,
+            "column" : 16,
+            "source_fragment" : "ocs_hit_counter.count((bit<32>)standard_metadata.ingress_port)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "ocs153",
+      "id" : 4,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_0"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "field",
+                    "value" : ["standard_metadata", "ingress_port"]
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "ocs.p4",
+            "line" : 153,
+            "column" : 39,
+            "source_fragment" : "(bit<32>)standard_metadata.ingress_port"
+          }
+        },
+        {
+          "op" : "count",
+          "parameters" : [
+            {
+              "type" : "counter_array",
+              "value" : "MyIngress.ocs_miss_counter"
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_0"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "ocs.p4",
+            "line" : 153,
+            "column" : 16,
+            "source_fragment" : "ocs_miss_counter.count((bit<32>)standard_metadata.ingress_port)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "ocs156",
+      "id" : 5,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "mark_to_drop",
+          "parameters" : [
+            {
+              "type" : "header",
+              "value" : "standard_metadata"
+            }
+          ],
+          "source_info" : {
+            "filename" : "ocs.p4",
+            "line" : 156,
+            "column" : 12,
+            "source_fragment" : "mark_to_drop(standard_metadata)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "ocs146",
+      "id" : 6,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_1"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "field",
+                    "value" : ["standard_metadata", "ingress_port"]
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "ocs.p4",
+            "line" : 146,
             "column" : 27,
             "source_fragment" : "(bit<32>)standard_metadata.ingress_port"
           }
@@ -290,21 +472,40 @@
             },
             {
               "type" : "field",
-              "value" : ["scalars", "tmp"]
+              "value" : ["scalars", "tmp_1"]
             }
           ],
           "source_info" : {
             "filename" : "ocs.p4",
-            "line" : 130,
+            "line" : 146,
             "column" : 8,
             "source_fragment" : "port_counter.count((bit<32>)standard_metadata.ingress_port)"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata.hit"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            }
+          ],
+          "source_info" : {
+            "filename" : "ocs.p4",
+            "line" : 147,
+            "column" : 8,
+            "source_fragment" : "meta.hit = 0"
           }
         }
       ]
     },
     {
-      "name" : "ocs151",
-      "id" : 5,
+      "name" : "ocs173",
+      "id" : 7,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -312,7 +513,7 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "tmp_0"]
+              "value" : ["scalars", "tmp_2"]
             },
             {
               "type" : "expression",
@@ -334,7 +535,7 @@
           ],
           "source_info" : {
             "filename" : "ocs.p4",
-            "line" : 151,
+            "line" : 173,
             "column" : 27,
             "source_fragment" : "(bit<32>)standard_metadata.egress_port"
           }
@@ -348,12 +549,12 @@
             },
             {
               "type" : "field",
-              "value" : ["scalars", "tmp_0"]
+              "value" : ["scalars", "tmp_2"]
             }
           ],
           "source_info" : {
             "filename" : "ocs.p4",
-            "line" : 151,
+            "line" : 173,
             "column" : 8,
             "source_fragment" : "port_counter.count((bit<32>)standard_metadata.egress_port)"
           }
@@ -367,20 +568,20 @@
       "id" : 0,
       "source_info" : {
         "filename" : "ocs.p4",
-        "line" : 81,
+        "line" : 93,
         "column" : 8,
         "source_fragment" : "MyIngress"
       },
-      "init_table" : "tbl_ocs130",
+      "init_table" : "tbl_ocs146",
       "tables" : [
         {
-          "name" : "tbl_ocs130",
+          "name" : "tbl_ocs146",
           "id" : 0,
           "source_info" : {
             "filename" : "ocs.p4",
-            "line" : 130,
+            "line" : 146,
             "column" : 8,
-            "source_fragment" : "port_counter.count((bit<32>)standard_metadata.ingress_port)"
+            "source_fragment" : "port_counter.count((bit<32>)standard_metadata.ingress_port); ..."
           },
           "key" : [],
           "match_type" : "exact",
@@ -389,14 +590,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [4],
-          "actions" : ["ocs130"],
+          "action_ids" : [6],
+          "actions" : ["ocs146"],
           "base_default_next" : "node_3",
           "next_tables" : {
-            "ocs130" : "node_3"
+            "ocs146" : "node_3"
           },
           "default_entry" : {
-            "action_id" : 4,
+            "action_id" : 6,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -407,7 +608,7 @@
           "id" : 1,
           "source_info" : {
             "filename" : "ocs.p4",
-            "line" : 109,
+            "line" : 123,
             "column" : 10,
             "source_fragment" : "ocs_schedule"
           },
@@ -433,11 +634,11 @@
           "direct_meters" : null,
           "action_ids" : [2, 1, 0],
           "actions" : ["MyIngress.ocs_forward", "MyIngress.drop", "NoAction"],
-          "base_default_next" : null,
+          "base_default_next" : "node_5",
           "next_tables" : {
-            "MyIngress.ocs_forward" : null,
-            "MyIngress.drop" : null,
-            "NoAction" : null
+            "MyIngress.ocs_forward" : "node_5",
+            "MyIngress.drop" : "node_5",
+            "NoAction" : "node_5"
           },
           "default_entry" : {
             "action_id" : 0,
@@ -447,11 +648,69 @@
           }
         },
         {
-          "name" : "tbl_ocs134",
+          "name" : "tbl_ocs151",
           "id" : 2,
           "source_info" : {
             "filename" : "ocs.p4",
-            "line" : 134,
+            "line" : 151,
+            "column" : 16,
+            "source_fragment" : "ocs_hit_counter.count((bit<32>)standard_metadata.ingress_port)"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [3],
+          "actions" : ["ocs151"],
+          "base_default_next" : null,
+          "next_tables" : {
+            "ocs151" : null
+          },
+          "default_entry" : {
+            "action_id" : 3,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_ocs153",
+          "id" : 3,
+          "source_info" : {
+            "filename" : "ocs.p4",
+            "line" : 153,
+            "column" : 16,
+            "source_fragment" : "ocs_miss_counter.count((bit<32>)standard_metadata.ingress_port)"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [4],
+          "actions" : ["ocs153"],
+          "base_default_next" : null,
+          "next_tables" : {
+            "ocs153" : null
+          },
+          "default_entry" : {
+            "action_id" : 4,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_ocs156",
+          "id" : 4,
+          "source_info" : {
+            "filename" : "ocs.p4",
+            "line" : 156,
             "column" : 12,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           },
@@ -462,14 +721,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [3],
-          "actions" : ["ocs134"],
+          "action_ids" : [5],
+          "actions" : ["ocs156"],
           "base_default_next" : null,
           "next_tables" : {
-            "ocs134" : null
+            "ocs156" : null
           },
           "default_entry" : {
-            "action_id" : 3,
+            "action_id" : 5,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -483,7 +742,7 @@
           "id" : 0,
           "source_info" : {
             "filename" : "ocs.p4",
-            "line" : 131,
+            "line" : 148,
             "column" : 12,
             "source_fragment" : "hdr.ethernet.etherType == TYPE_OpenOptics"
           },
@@ -502,7 +761,33 @@
             }
           },
           "true_next" : "MyIngress.ocs_schedule",
-          "false_next" : "tbl_ocs134"
+          "false_next" : "tbl_ocs156"
+        },
+        {
+          "name" : "node_5",
+          "id" : 1,
+          "source_info" : {
+            "filename" : "ocs.p4",
+            "line" : 150,
+            "column" : 16,
+            "source_fragment" : "meta.hit == 1"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata.hit"]
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x01"
+              }
+            }
+          },
+          "true_next" : "tbl_ocs151",
+          "false_next" : "tbl_ocs153"
         }
       ]
     },
@@ -511,18 +796,18 @@
       "id" : 1,
       "source_info" : {
         "filename" : "ocs.p4",
-        "line" : 144,
+        "line" : 166,
         "column" : 8,
         "source_fragment" : "MyEgress"
       },
-      "init_table" : "tbl_ocs151",
+      "init_table" : "tbl_ocs173",
       "tables" : [
         {
-          "name" : "tbl_ocs151",
-          "id" : 3,
+          "name" : "tbl_ocs173",
+          "id" : 5,
           "source_info" : {
             "filename" : "ocs.p4",
-            "line" : 151,
+            "line" : 173,
             "column" : 8,
             "source_fragment" : "port_counter.count((bit<32>)standard_metadata.egress_port)"
           },
@@ -533,14 +818,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [5],
-          "actions" : ["ocs151"],
+          "action_ids" : [7],
+          "actions" : ["ocs173"],
           "base_default_next" : null,
           "next_tables" : {
-            "ocs151" : null
+            "ocs173" : null
           },
           "default_entry" : {
-            "action_id" : 5,
+            "action_id" : 7,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -592,7 +877,7 @@
       ["standard_metadata", "priority"]
     ]
   ],
-  "program" : "./ocs.p4i",
+  "program" : "ocs.p4",
   "__meta__" : {
     "version" : [2, 23],
     "compiler" : "https://github.com/p4lang/p4c"

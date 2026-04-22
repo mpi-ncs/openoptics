@@ -40,6 +40,11 @@ struct PortQueueMetric {
   3:required i32 depth; //in packets
   //To-do: add queue depth watermark
   //4:required i32 drop_ctr;
+  // Queueing latency (microseconds) aggregated over the last N packets since the
+  // previous poll. ``latency_us_max`` is reset at each read; ``latency_us_mean``
+  // is the mean over the in-memory window (default N=128).
+  5:optional i32 latency_us_mean;
+  6:optional i32 latency_us_max;
 }
 
 struct MonitorResult {

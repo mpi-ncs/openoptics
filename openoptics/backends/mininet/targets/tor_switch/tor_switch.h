@@ -36,6 +36,9 @@
 #include <thread>
 #include <vector>
 #include <functional>
+#include <mutex>
+#include <unordered_map>
+#include <cstdint>
 
 // TODO(antonin)
 // experimental support for priority queueing
@@ -213,6 +216,23 @@ class TorSwitch : public Switch {
   void check_queueing_metadata();
 
   void multicast(Packet *packet, unsigned int mgid);
+
+  // Record one packet's dequeue-time latency sample (microseconds) for the
+  // given (egress_port, queue). Thread-safe; called from every dequeue site.
+  void record_queue_latency(size_t port, size_t queue, uint32_t deq_timedelta_us);
+
+  static constexpr size_t kLatencyWindow = 128u;
+  struct LatencyWindow {
+    uint32_t samples[kLatencyWindow] = {0};
+    size_t head = 0;
+    size_t count = 0;
+    uint32_t max_since_read = 0;
+  };
+  mutable std::mutex latency_mutex_;
+  // Key = (port << 32) | queue, avoids defining a hash for std::pair.
+  // `mutable` because `get_device_metric()` is const but needs to reset
+  // max_since_read after reading it.
+  mutable std::unordered_map<uint64_t, LatencyWindow> latency_windows_;
 
  private:
   port_t drop_port;

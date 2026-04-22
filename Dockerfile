@@ -56,10 +56,8 @@ RUN pip install --upgrade setuptools wheel packaging
 # `from mininet.net import Mininet` to work, so pip-install the PyPI package
 # alongside the apt-installed `mn` CLI — they coexist cleanly.
 RUN pip install --no-cache-dir networkx numpy matplotlib mininet
-RUN pip install --no-cache-dir asgiref Django
-RUN pip uninstall channels
-# Install Django first then channels["daphne"] to avoid some errors for installing daphne
-RUN pip install --no-cache-dir channels-redis channels["daphne"]
+# In-process dashboard stack (replaces the old Django + Channels + Redis setup).
+RUN pip install --no-cache-dir fastapi "uvicorn[standard]" jinja2
 RUN pip install --no-cache-dir nnpy
 RUN pip install --no-cache-dir paramiko
 
@@ -101,11 +99,9 @@ RUN apt-get install -qq --no-install-recommends \
     lsb-release \
     iputils-ping \
     ssh \
-    redis-server \
-    ethtool
-
-#networkx mininet Django matplotlib daphne channels-redis
-RUN service redis-server start
+    ethtool \
+    lsof \
+    psmisc
 
 #EXPOSE 5201/tcp 5201/udp
 #EXPOSE 5001/tcp 5001/udp

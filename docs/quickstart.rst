@@ -23,9 +23,8 @@ so you can view it locally:
 Step 2. Pull the Docker image and enter the container
 -----------------------------------------------------
 
-The ``ymlei/openoptics:latest`` image has BMv2, Mininet, Redis, Thrift, and
-the P4 toolchain preinstalled — everything the Mininet backend needs at
-runtime.
+The ``ymlei/openoptics:latest`` image has BMv2, Mininet, Thrift, and the P4
+toolchain preinstalled — everything the Mininet backend needs at runtime.
 
 .. code-block:: bash
 
@@ -47,7 +46,7 @@ Inside the container (which drops you in ``/root``):
    pip install "openoptics-dcn[mininet]"
 
 This pulls the Python package plus the Mininet-Python bindings, Thrift,
-Django, Daphne, Channels, and Redis client libraries.
+FastAPI, and Uvicorn (for the in-process dashboard).
 
 Step 4. Seed a working directory
 --------------------------------
@@ -162,10 +161,11 @@ Monitor with the OpenOptics Dashboard
    :alt: OpenOptics Dashboard
 
 The dashboard starts automatically when you create a ``BaseNetwork`` with
-``use_webserver=True`` (the default): Redis is launched, Django migrations are
-applied, and the runserver binds ``localhost:8001`` — all in-process. Visit
-http://localhost:8001 in your browser to view the live topology and realtime
-performance graphs (served over WebSockets).
+``use_webserver=True`` (the default): FastAPI + Uvicorn serve the UI
+in-process on ``localhost:8001``. Historical runs land in
+``~/.openoptics/dashboard.sqlite3`` and show up in the epoch selector on
+the left. Visit http://localhost:8001 in your browser to view the live
+topology and realtime performance graphs (served over WebSockets).
 
 If you're on a remote machine, remember to tunnel the port:
 

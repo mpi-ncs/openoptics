@@ -8,17 +8,13 @@
 # License text: Creative Commons NC BY SA 4.0
 # https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en
 
-import importlib
 import os
-import socket
-import subprocess
-import sys
 import time
-from pathlib import Path as FsPath
 
 import networkx as nx
 import openoptics.utils as utils
 from openoptics.backends import create_backend
+from openoptics.dashboard import NullDashboard
 from openoptics.DeviceManager import DeviceManager
 from openoptics.OpticalCLI import OpticalCLI
 from openoptics.TimeFlowTable import Path, TimeFlowEntry
@@ -108,6 +104,11 @@ class BaseNetwork:
         self.ocs_tor_link_bw = ocs_tor_link_bw
         self.tor_host_link_bw = tor_host_link_bw
 
+        # Always present so callers can invoke dashboard methods unconditionally;
+        # start_monitor() replaces this with a real DashboardService when
+        # use_webserver=True.
+        self.dashboard = NullDashboard()
+
         # Backward-compat alias
         self.time_slice_duration_ms = self.time_slice_duration_us / 1000
 
@@ -137,67 +138,46 @@ class BaseNetwork:
         """
         Start OpenOptics DeviceManager and Dashboard.
 
-        Initializes the monitoring system and starts the web dashboard
-        if use_webserver is enabled. The dashboard is accessible at
-        http://localhost:8001.
+        Initialises the monitoring system and starts the web dashboard if
+        ``use_webserver`` is enabled. The dashboard runs in-process on the
+        host and port configured by :class:`DashboardConfig` (default
+        ``localhost:8001``).
         """
+        if self.use_webserver:
+            from openoptics.dashboard.collectors import ReconfigEventPublisher
+            reconfig_publisher = ReconfigEventPublisher()
+        else:
+            reconfig_publisher = None
+
         if self._backend.supports_device_manager:
             self.device_manager = DeviceManager(
                 self._backend,
                 self.tor_ocs_ports,
                 nb_queue=self.nb_time_slices if self.arch_mode == "TO" else self.nb_node,
+                event_publisher=reconfig_publisher,
             )
         else:
             self.device_manager = None
 
         if self.use_webserver and self.device_manager is not None:
-            from openoptics.dashboard._bootstrap import bootstrap
-            from openoptics.Dashboard import Dashboard
+            from openoptics.dashboard import DashboardConfig, DashboardService
+            from openoptics.dashboard.collectors import DeviceMetricCollector
 
-            bootstrap()
-
-            self.dashboard = Dashboard(
-                self.slice_to_topo,
+            self.dashboard = DashboardService(DashboardConfig.from_env())
+            self.dashboard.begin_epoch()
+            self.dashboard.update_topology(self.slice_to_topo)
+            self.dashboard.register_collector(DeviceMetricCollector(
                 self.device_manager,
-                self.nb_link,
-                nb_queue=self.nb_time_slices
-                if self.calendar_queue_mode == 0
-                else self.nb_node,
-            )
+                nb_port=self.nb_link,
+                nb_queue=(
+                    self.nb_time_slices
+                    if self.calendar_queue_mode == 0
+                    else self.nb_node
+                ),
+                interval_s=self.dashboard.config.poll_interval_s,
+            ))
+            self.dashboard.register_event_source(reconfig_publisher)
             self.dashboard.start()
-
-            dashboard_pkg = importlib.import_module("openoptics.dashboard")
-            dashboard_root = FsPath(next(iter(dashboard_pkg.__path__)))
-            manage_py = dashboard_root / "manage.py"
-            log_path = "/tmp/openoptics_dashboard.log"
-            log_file = open(log_path, "wb")
-            self._runserver_proc = subprocess.Popen(
-                [sys.executable, str(manage_py), "runserver",
-                 "--noreload", "localhost:8001"],
-                stdout=log_file, stderr=subprocess.STDOUT,
-                cwd=str(dashboard_root),
-            )
-            self._runserver_log = log_file
-
-            bound = False
-            for _ in range(25):
-                if self._runserver_proc.poll() is not None:
-                    break
-                try:
-                    with socket.create_connection(("127.0.0.1", 8001), timeout=0.5):
-                        bound = True
-                        break
-                except OSError:
-                    time.sleep(0.2)
-
-            if bound:
-                print("Access dashboard at http://localhost:8001")
-            else:
-                exit_code = self._runserver_proc.poll()
-                print(
-                    f"Dashboard runserver did not bind localhost:8001 "
-                    f"(exit={exit_code}). See {log_path} for details."
-                )
 
     def start_cli(self):
         """
@@ -213,17 +193,7 @@ class BaseNetwork:
 
         Stops the dashboard (if running) and the backend network.
         """
-        if self.use_webserver and hasattr(self, 'dashboard'):
-            self.dashboard.stop()
-        if hasattr(self, '_runserver_proc') and self._runserver_proc.poll() is None:
-            self._runserver_proc.terminate()
-            try:
-                self._runserver_proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                self._runserver_proc.kill()
-                self._runserver_proc.wait()
-        if hasattr(self, '_runserver_log'):
-            self._runserver_log.close()
+        self.dashboard.stop()
         self._backend.stop()
 
     def create_nodes(self):
@@ -525,8 +495,8 @@ class BaseNetwork:
         if self.nb_time_slices == 0:
             raise Exception("No time slices deployed.")
 
-        if self.nodes_created and self.use_webserver:
-            self.dashboard.update_topo(self.slice_to_topo)
+        if self.nodes_created:
+            self.dashboard.update_topology(self.slice_to_topo)
 
         if not self.nodes_created:
             self.create_nodes()

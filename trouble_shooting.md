@@ -2,20 +2,25 @@
 
 ## Common Issues and Solutions
 
-### Redis Connection Error
-redis.exceptions.ConnectionError: Error 111 connecting to 127.0.0.1:6379. Connect call failed ('127.0.0.1', 6379).
+### Dashboard port already in use
 
-### Database Table Missing Error
-django.db.utils.OperationalError: no such table: dashboardapp_epochs
+`[Errno 98] Address already in use` when starting the dashboard usually means
+a previous OpenOptics run didn't shut cleanly and its Uvicorn is still bound
+to ``localhost:8001``. Options:
 
-### Solution
+- Kill the leftover process: ``pkill -f 'openoptics-dashboard'`` or
+  ``lsof -i :8001`` to find the PID.
+- Pick a different port: ``export OPENOPTICS_DASHBOARD_PORT=8002`` before
+  starting the example.
 
-These error messages indicate that either:
-- The Redis server is not running
-- The database has not been initialized
+### Dashboard shows no epochs / empty sidebar
 
-`BaseNetwork.start()` now runs Redis + Django migrations in-process whenever
-`use_webserver=True`, so these should be rare. If you still see them, check
-that `redis-server` is installed (`apt-get install redis-server`) and that
-the dashboard log at `/tmp/openoptics_dashboard.log` doesn't show a Django
-error.
+The SQLite database lives at ``~/.openoptics/dashboard.sqlite3`` (override
+via ``$OPENOPTICS_STATE_DIR``). If you're running as ``root`` inside Docker
+but the host's ``~/.openoptics`` is read-only, set
+``OPENOPTICS_STATE_DIR=/tmp/openoptics`` for that run.
+
+### ``ModuleNotFoundError: No module named 'fastapi'``
+
+Install the dashboard extra: ``pip install "openoptics-dcn[dashboard]"``
+(or ``[mininet]`` / ``[all]``, which pull it in transitively).

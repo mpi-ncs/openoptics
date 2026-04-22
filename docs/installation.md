@@ -5,8 +5,7 @@ to use.
 
 ## Path A — Mininet backend (Docker image + `pip install`)
 
-The Mininet backend needs native components that pip cannot usefully provide:
-BMv2 binaries, the Mininet `mn` CLI, OVS, kernel network namespace support.
+The Mininet backend needs components (e.g. BMv2 binaries) that pip cannot properly provide.
 The `ymlei/openoptics:latest` Docker image ships all of that prebuilt. You
 add the Python package on top with `pip install`.
 
@@ -25,7 +24,16 @@ openoptics-gen-examples          # copies ./examples/
 python3 examples/mininet_routing_direct_perhop.py
 ```
 
-The dashboard (Redis + Django migrations + runserver) starts automatically when your script creates a `BaseNetwork` with `use_webserver=True` (the default).
+The dashboard (FastAPI + Uvicorn) starts in-process automatically when your script creates a `BaseNetwork` with `use_webserver=True` (the default). No Redis, no separate server — everything runs inside the Python process.
+
+Configure via environment variables (all optional):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `OPENOPTICS_STATE_DIR` | `~/.openoptics` | SQLite DB + generated topology images |
+| `OPENOPTICS_DASHBOARD_HOST` | `localhost` | Bind host for the web UI |
+| `OPENOPTICS_DASHBOARD_PORT` | `8001` | Bind port for the web UI |
+| `OPENOPTICS_DASHBOARD_POLL_INTERVAL` | `1.0` | Metric polling interval in seconds |
 
 See [Quick Start](quickstart.rst) for a walkthrough.
 
