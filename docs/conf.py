@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 project = "OpenOptics"
 copyright = "2025, Network and Cloud Systems Group, MPI-INF"
 author = "Yiming Lei"
-version = "0.0.1"
+version = "0.0.2"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -93,7 +93,9 @@ autodoc_mock_imports = [
     "networkx",
     "tswitch_CLI",
     "runtime_CLI",
-    "django",
+    "fastapi",
+    "uvicorn",
+    "jinja2",
     "matplotlib",
     "mininet",
 ]

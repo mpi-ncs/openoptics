@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openoptics-dcn"
-version = "0.0.1"
+version = "0.0.2"
 description = "A research framework for designing, testing, and deploying optical datacenter networks"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -32,9 +32,10 @@ dependencies = [
 ]
 
 [project.scripts]
-openoptics-gen-config      = "openoptics.backends.tofino.gen_config:main"
-openoptics-gen-examples    = "openoptics._cli.gen_examples:main"
-openoptics-gen-tutorials   = "openoptics._cli.gen_tutorials:main"
+openoptics-gen-config        = "openoptics.backends.tofino.gen_config:main"
+openoptics-gen-examples      = "openoptics._cli.gen_examples:main"
+openoptics-gen-tutorials     = "openoptics._cli.gen_tutorials:main"
+openoptics-dashboard-clean   = "openoptics._cli.clean_dashboard:main"
 
 [project.urls]
 Homepage = "https://openoptics.mpi-inf.mpg.de"
@@ -53,16 +54,13 @@ tofino  = ["paramiko", "tomli; python_version < '3.11'"]
 ns3     = []
 viz = ["matplotlib>=3.5"]
 dashboard = [
-    # Django 4.2 LTS is the newest line that still supports Python 3.8
-    # (which ships in the ymlei/openoptics Docker image).  Bump the lower
-    # bound when we drop 3.8 support.
-    "django>=4.2,<6",
-    "daphne",
-    "redis",
-    "channels",
-    "channels-redis",
+    # FastAPI + Uvicorn replace Django + Channels + Redis: everything runs
+    # in-process, no subprocess, no external services. Jinja2 is only for
+    # rendering the single page shell; all data flows through JSON/WS.
+    "fastapi>=0.100",
+    "uvicorn[standard]>=0.23",
+    "jinja2>=3.1",
     "matplotlib>=3.5",
-    "Pillow",
 ]
 dev = ["pytest", "build", "twine"]
 all = [
@@ -82,9 +80,9 @@ packages = [
     "openoptics.backends.ns3",
     "openoptics.backends.tofino",
     "openoptics.dashboard",
-    "openoptics.dashboard.dashboard",
-    "openoptics.dashboard.dashboardapp",
-    "openoptics.dashboard.dashboardapp.migrations",
+    "openoptics.dashboard.collectors",
+    "openoptics.dashboard.storage",
+    "openoptics.dashboard.web",
     "openoptics._bundled_examples",
     "openoptics._bundled_tutorials",
     "openoptics._bundled_tutorials.solutions",
@@ -111,7 +109,10 @@ packages = [
     "src/**/*.h",
     "CMakeLists.txt",
 ]
-"openoptics.dashboard.dashboardapp" = [
+"openoptics.dashboard.storage" = [
+    "*.sql",
+]
+"openoptics.dashboard.web" = [
     "templates/**/*.html",
     "static/**/*",
 ]

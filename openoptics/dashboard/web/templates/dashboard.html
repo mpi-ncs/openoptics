@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block body %}
+<aside class="sidebar">
+  <div class="brand">
+    <img src="{{ url_for('static', path='/logo.png') }}" alt="OpenOptics">
+    <h2>OpenOptics Dashboard</h2>
+  </div>
+  <nav class="epoch-list" id="epoch-list"></nav>
+</aside>
+
+<main class="main">
+  <section class="topo-panel">
+    <img id="topo-image" alt="Topology">
+  </section>
+
+  <section class="metrics-panel" id="metrics-panel"></section>
+
+  <section class="empty-state" id="empty-state" hidden>
+    <h2>Welcome to the OpenOptics dashboard.</h2>
+    <p>Run an OpenOptics network (<code>use_webserver=True</code>) to start seeing live data here.</p>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script type="module" src="{{ url_for('static', path='/js/app.js') }}"></script>
+{% endblock %}

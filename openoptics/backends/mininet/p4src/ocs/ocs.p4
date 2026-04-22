@@ -48,7 +48,7 @@ header ipv4_t {
 }
 
 struct metadata {
-
+    bit<1> hit;
 }
 
 struct headers {
@@ -109,10 +109,12 @@ control MyIngress(inout headers hdr,
     }
 
     action drop() {
+        meta.hit = 1;
         mark_to_drop(standard_metadata);
     }
 
     action ocs_forward(egressSpec_t port) {
+        meta.hit = 1;
         standard_metadata.egress_spec = port;
     }
 
@@ -135,13 +137,21 @@ control MyIngress(inout headers hdr,
     }
 
     counter(512, CounterType.packets_and_bytes) port_counter;
+    counter(512, CounterType.packets) ocs_hit_counter;
+    counter(512, CounterType.packets) ocs_miss_counter;
 
     apply {
         //timestamp_to_slice.apply();
         //only if IPV4 the rule is applied. Therefore other packets will not be forwarded.
         port_counter.count((bit<32>)standard_metadata.ingress_port);
+        meta.hit = 0;
         if (hdr.ethernet.etherType == TYPE_OpenOptics) {
             ocs_schedule.apply();
+            if (meta.hit == 1) {
+                ocs_hit_counter.count((bit<32>)standard_metadata.ingress_port);
+            } else {
+                ocs_miss_counter.count((bit<32>)standard_metadata.ingress_port);
+            }
         } else {
             mark_to_drop(standard_metadata);
         }

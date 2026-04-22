@@ -1,0 +1,255 @@
+:root {
+  --bg-page:          #f8fafc;
+  --bg-card:          #ffffff;
+  --bg-sidebar:       #0f172a;
+  --bg-sidebar-hov:   #1e293b;
+  --bg-section-alt:   #eef2ff;
+  --border:           #e2e8f0;
+  --border-strong:    #cbd5e1;
+  --text:             #0f172a;
+  --text-muted:       #64748b;
+  --text-inverse:     #f1f5f9;
+  --text-inverse-dim: #94a3b8;
+  --accent:           #6366f1;
+  --accent-strong:    #4f46e5;
+  --shadow-sm:        0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-md:        0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --radius:           10px;
+  --radius-sm:        6px;
+  --duration:         180ms;
+  --ease:             cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-page);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ───── sidebar ─────────────────────────────────────────────────── */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100%;
+  background: var(--bg-sidebar);
+  color: var(--text-inverse);
+  padding: 24px 18px;
+  overflow-y: auto;
+  border-right: 1px solid var(--bg-sidebar-hov);
+}
+
+.sidebar .brand {
+  text-align: center;
+  padding: 6px 8px 22px;
+  border-bottom: 1px solid var(--bg-sidebar-hov);
+  margin-bottom: 18px;
+}
+.sidebar .brand img {
+  width: 72%;
+  max-width: 160px;
+  height: auto;
+  opacity: 0.96;
+}
+.sidebar .brand h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 14px 0 0;
+  color: var(--text-inverse);
+  line-height: 1.25;
+}
+
+.epoch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.epoch-list a {
+  display: block;
+  padding: 8px 10px;
+  color: var(--text-inverse-dim);
+  text-decoration: none;
+  font-size: 0.82rem;
+  border-radius: var(--radius-sm);
+  transition: background var(--duration) var(--ease),
+              color var(--duration) var(--ease);
+}
+.epoch-list a:hover {
+  background: var(--bg-sidebar-hov);
+  color: var(--text-inverse);
+}
+.epoch-list a.active {
+  background: var(--accent-strong);
+  color: white;
+  font-weight: 500;
+}
+
+/* ───── main ────────────────────────────────────────────────────── */
+
+.main {
+  margin-left: 260px;
+  padding: 24px 32px 48px;
+  animation: fadeIn 240ms var(--ease);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.topo-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 16px;
+  height: 42vh;
+  overflow: auto;           /* both axes scroll when needed */
+  margin-bottom: 24px;
+  text-align: center;
+}
+.topo-panel img {
+  height: 100%;
+  width: auto;              /* render at natural aspect ratio */
+  max-width: none;          /* override the browser's implicit constraint */
+  vertical-align: middle;
+}
+
+/* ───── metric cards ────────────────────────────────────────────── */
+
+.metric-group {
+  margin-bottom: 28px;
+}
+.metric-group h3 {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* Grid of tiles per metric type. Responsive: auto-fill with a 320px min so
+ * narrow viewports collapse to one column. Each tile renders its chart
+ * eagerly, letting users scan everything without scroll or accordion clicks;
+ * clicking a tile expands it in-place to the full grid width for closer
+ * inspection. */
+.metric-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.metric-empty {
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  grid-column: 1 / -1;
+}
+
+.metric-chart-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow var(--duration) var(--ease),
+              grid-column var(--duration) var(--ease);
+}
+.metric-chart-wrap:hover {
+  box-shadow: var(--shadow-md);
+}
+.metric-chart-wrap.is-aggregate {
+  background: var(--bg-section-alt);
+  border-color: #c7d2fe;
+}
+/* Expanded tile spans the full grid row and grows taller so the user can
+ * read labels/tooltips in detail. Clicked again to collapse. */
+.metric-chart-wrap.is-expanded {
+  grid-column: 1 / -1;
+}
+.metric-chart-wrap.is-expanded .metric-chart-canvas-wrap {
+  height: 44vh;
+}
+
+.metric-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+  transition: background var(--duration) var(--ease);
+}
+.metric-chart-header:hover {
+  background: rgba(99, 102, 241, 0.05);
+}
+/* Expand/collapse chevron: right-pointing when collapsed, down when expanded. */
+.metric-chart-header::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--text-muted);
+  border-bottom: 2px solid var(--text-muted);
+  transform: rotate(-45deg);
+  transition: transform var(--duration) var(--ease);
+  margin-right: 4px;
+}
+.metric-chart-wrap.is-expanded .metric-chart-header::after {
+  transform: rotate(45deg);
+}
+.metric-chart-wrap.is-aggregate .metric-chart-header {
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+
+.metric-chart-canvas-wrap {
+  padding: 10px 12px 12px;
+  height: 180px;
+  transition: height var(--duration) var(--ease);
+}
+.metric-chart-canvas-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ───── empty state ─────────────────────────────────────────────── */
+
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--text-muted);
+}
+.empty-state h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.empty-state code {
+  background: var(--border);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  color: var(--text);
+}

@@ -468,12 +468,45 @@ TorSwitch::get_device_metric(tswitch_runtime::MonitorResult& _return) const {
     pm.port = std::get<0>(item);
     pm.queue = std::get<1>(item);
     pm.depth = std::get<2>(item);
+
+    // Attach latency window (mean over last N, max since last read) if we have
+    // any samples for this (port, queue). Thread-safe: take the map mutex.
+    {
+      std::lock_guard<std::mutex> lock(latency_mutex_);
+      auto key = (static_cast<uint64_t>(pm.port) << 32) |
+                 static_cast<uint32_t>(pm.queue);
+      auto it = latency_windows_.find(key);
+      if (it != latency_windows_.end() && it->second.count > 0) {
+        auto &w = it->second;
+        uint64_t sum = 0;
+        for (size_t i = 0; i < w.count; i++) sum += w.samples[i];
+        pm.latency_us_mean = static_cast<int32_t>(sum / w.count);
+        pm.latency_us_max = static_cast<int32_t>(w.max_since_read);
+        pm.__isset.latency_us_mean = true;
+        pm.__isset.latency_us_max = true;
+        w.max_since_read = 0;
+      }
+    }
+
     monitor_result.port_queue_metrics.push_back(pm);
   }
 
   monitor_result.drop_ctr = nb_pkts_dropped;
 
   _return = monitor_result;
+}
+
+void
+TorSwitch::record_queue_latency(size_t port, size_t queue,
+                                uint32_t deq_timedelta_us) {
+  std::lock_guard<std::mutex> lock(latency_mutex_);
+  auto key = (static_cast<uint64_t>(port) << 32) |
+             static_cast<uint32_t>(queue);
+  auto &w = latency_windows_[key];
+  w.samples[w.head] = deq_timedelta_us;
+  w.head = (w.head + 1) % kLatencyWindow;
+  if (w.count < kLatencyWindow) w.count++;
+  if (deq_timedelta_us > w.max_since_read) w.max_since_read = deq_timedelta_us;
 }
 
 void
@@ -851,15 +884,27 @@ TorSwitch::egress_cq_thread() {
     }
 
     if (with_queueing_metadata) {
-      auto enq_timestamp =
-          phv->get_field("queueing_metadata.enq_timestamp").get<ts_res::rep>();
-      phv->get_field("queueing_metadata.deq_timedelta").set(
-          get_ts().count() - enq_timestamp);
+      // queueing_metadata.enq_timestamp is 32-bit in v1model, so the value we
+      // read back is only the low 32 bits of the full int64 µs-since-epoch
+      // that was stored at enqueue. Compute the delta in 32-bit modular
+      // arithmetic to match — correct for any queue latency < 2^32 µs (~71
+      // minutes), which covers every realistic case.
+      uint32_t enq_timestamp = static_cast<uint32_t>(
+          phv->get_field("queueing_metadata.enq_timestamp").get<ts_res::rep>());
+      uint32_t now_low32 = static_cast<uint32_t>(get_ts().count());
+      uint32_t deq_timedelta = now_low32 - enq_timestamp;
+      phv->get_field("queueing_metadata.deq_timedelta").set(deq_timedelta);
       phv->get_field("queueing_metadata.deq_qdepth").set(
           egress_cq_buffers.size(port, active_q));
       if (phv->has_field("queueing_metadata.qid")) {
         auto &qid_f = phv->get_field("queueing_metadata.qid");
         qid_f.set(active_q);
+      }
+      // Skip unstamped packets (enq_timestamp==0): the packet bypassed
+      // enqueue() (control-plane inject / recirc with reset metadata) and
+      // this "delta" would really be the full wall-clock low32.
+      if (enq_timestamp != 0) {
+        record_queue_latency(port, active_q, deq_timedelta);
       }
     }
 
@@ -938,15 +983,21 @@ TorSwitch::egress_thread(size_t worker_id) {
     }
 
     if (with_queueing_metadata) {
-      auto enq_timestamp =
-          phv->get_field("queueing_metadata.enq_timestamp").get<ts_res::rep>();
-      phv->get_field("queueing_metadata.deq_timedelta").set(
-          get_ts().count() - enq_timestamp);
+      // See egress_cq_thread: 32-bit modular subtract matches the PHV width.
+      uint32_t enq_timestamp = static_cast<uint32_t>(
+          phv->get_field("queueing_metadata.enq_timestamp").get<ts_res::rep>());
+      uint32_t now_low32 = static_cast<uint32_t>(get_ts().count());
+      uint32_t deq_timedelta = now_low32 - enq_timestamp;
+      phv->get_field("queueing_metadata.deq_timedelta").set(deq_timedelta);
       phv->get_field("queueing_metadata.deq_qdepth").set(
           egress_buffers.size(port));
+      size_t qid = nb_queues_per_port - 1 - priority;
       if (phv->has_field("queueing_metadata.qid")) {
         auto &qid_f = phv->get_field("queueing_metadata.qid");
-        qid_f.set(nb_queues_per_port - 1 - priority);
+        qid_f.set(qid);
+      }
+      if (enq_timestamp != 0) {
+        record_queue_latency(port, qid, deq_timedelta);
       }
     }
 

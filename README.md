@@ -37,8 +37,8 @@ you need.
 
 ## For the Mininet backend: Docker image + `pip install`
 
-The `ymlei/openoptics:latest` image ships a fully built BMv2, Mininet, Redis,
-and all native dependencies. Add the Python package on top with pip.
+The `ymlei/openoptics:latest` image ships a fully built BMv2, Mininet, and
+all native dependencies. Add the Python package on top with pip.
 
 ```bash
 # If you're on a remote machine, forward the dashboard port first:
@@ -56,7 +56,7 @@ openoptics-gen-examples          # copies ./examples/ into cwd
 python3 examples/mininet_routing_direct_perhop.py
 ```
 
-The dashboard (Redis + Django migrations + runserver) starts automatically when your script creates a `BaseNetwork` with `use_webserver=True` (the default).
+The dashboard (FastAPI + Uvicorn) starts in-process automatically when your script creates a `BaseNetwork` with `use_webserver=True` (the default).
 
 Then try `h0 ping h1` / `h2 ping h3` inside the OpenOptics CLI.
 
@@ -162,7 +162,7 @@ You can find example scripts configuring different architectures under [examples
 
 ![OpenOptics Dashboard](https://raw.githubusercontent.com/mpi-ncs/openoptics/main/assets/dashboard.png)
 
-The dashboard starts automatically when you create a `BaseNetwork` with `use_webserver=True` (the default) — Redis is launched and Django migrations are applied in-process, so no separate setup step is needed.
+The dashboard starts automatically when you create a `BaseNetwork` with `use_webserver=True` (the default) — FastAPI + Uvicorn run in-process on the main Python interpreter, so no separate setup step is needed.
 In your web browser, visit http://0.0.0.0:8001 to view the dashboard.
 The dashboard displays the network topology, along with realtime graphs of network performance served via WebSockets. 
 

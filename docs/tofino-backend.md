@@ -48,7 +48,7 @@ Examples live under `examples/`: `tofino_4node_1link_direct.py`,
 |---|---|
 | Tofino2 switches | One OCS switch + one or more ToR switches |
 | Intel SDE | `bf-sde-9.12.0` installed at the path set in `[sde]` |
-| SSH access | Key-based SSH from the dev container to all switches (directly or via a jump host). Jump host needs a key on disk that can reach the switches. |
+| SSH access | Key-based SSH from your workstation to all switches (directly or via a jump host). Jump host needs a key on disk that can reach the switches. |
 
 ### 2.2 Quick start
 
@@ -92,9 +92,11 @@ openoptics-gen-examples                    # copies examples/ into cwd
 python3 examples/tofino_4node_2link_direct.py
 ```
 
-The Tofino backend does not require the OpenOptics Docker image — your
-workstation only needs Python, since the SDE and P4 toolchain live on the
-switches and are invoked over SSH.
+The Tofino backend runs from a plain Python environment — no Docker image is
+needed, since the SDE and P4 toolchain live on the switches and are invoked
+over SSH. `pip install "openoptics-dcn[tofino]"` pulls in `paramiko` (and
+`tomli` on Python < 3.11); that's the full dependency set on the workstation
+side.
 
 In the CLI:
 
@@ -216,19 +218,26 @@ user = "p4"
   `host_*` fields. Servers can then send real traffic through the optical DCN
   (e.g. `ping`).
 
-### 2.4 `BaseNetwork` parameters specific to Tofino
+### 2.4 `BaseNetwork` parameters for a Tofino deployment
 
-| Parameter | Type | Description |
-|---|---|---|
-| `backend` | str | `"Tofino"` |
-| `nb_node` | int | Number of logical ToRs |
-| `nb_link` | int | OCS uplinks per ToR — must match P4 `PORT_NUM` and `tor_ocs_port_pairs` length |
-| `time_slice_duration_us` | int | Optical slice length, µs |
-| `config_file` | str | Path to TOML |
-| `skip_deploy` | bool | `True` to reuse already-running switches |
-| `build_p4` | bool | Override `[sde].build_p4` |
-| `remote_workdir` | str | Working dir on switches (default `/tmp/openoptics`) |
-| `tofino_repo` | str | Override of the deployment package path on the switch |
+"Common" parameters are shared with other backends (Mininet, ns-3); "Tofino"
+parameters are only accepted when `backend="Tofino"` (they flow through
+`**backend_kwargs` and are validated against `TofinoBackend.accepted_kwargs()`).
+The table lists the parameters most relevant to a Tofino run — see
+`BaseNetwork.__init__` for the full common set (e.g. `nb_host_per_tor`,
+`arch_mode`, `guardband_ms`, `use_webserver`, `ocs_tor_link_bw`).
+
+| Parameter | Type | Scope | Description |
+|---|---|---|---|
+| `backend` | str | Common | `"Tofino"` |
+| `nb_node` | int | Common | Number of logical ToRs |
+| `nb_link` | int | Common | OCS uplinks per ToR — must match P4 `PORT_NUM` and `tor_ocs_port_pairs` length |
+| `time_slice_duration_us` | int | Common | Optical slice length, µs |
+| `config_file` | str | Tofino | Path to TOML |
+| `skip_deploy` | bool | Tofino | `True` to reuse already-running switches |
+| `build_p4` | bool | Tofino | Override `[sde].build_p4` |
+| `remote_workdir` | str | Tofino | Working dir on switches (default `/tmp/openoptics`) |
+| `tofino_repo` | str | Tofino | Override of the deployment package path on the switch |
 
 ---
 
@@ -237,7 +246,7 @@ user = "p4"
 ### 3.1 From Python to the wire
 
 ```
- dev container                  jump host                 switches
+ workstation                   jump host                 switches
 ┌───────────────────┐       ┌──────────────┐       ┌──────────────────┐
 │ BaseNetwork       │       │              │       │ OCS  switch      │
 │  └ TofinoBackend  │──SSH──▶  paramiko    │──TCP──▶  bf_switchd (OCS)│
@@ -276,19 +285,32 @@ user = "p4"
 
 ### 3.2 Runtime behavior
 
-- **OCS** — pktgen generates rotation packets every `time_slice_duration_us`;
-  the OCS ingress looks up `next_tor` and multicasts to all ToR-facing ports,
-  so every ToR observes the slice boundary synchronously.
-- **ToR** — each rotation signal advances `cur_slice`. Data packets hit
-  `time_flow_table`, keyed on `(cur_slice, dst_group)` →
+- **Emulated OCS** — a Tofino2 stands in for a real optical circuit switch.
+  Pktgen generates rotation packets every `time_slice_duration_us`; the OCS
+  ingress looks up `next_tor` and multicasts to all ToR-facing ports, so
+  every ToR observes the slice boundary synchronously.
+- **ToR data plane** — each rotation signal advances `cur_slice`. Data packets
+  hit `time_flow_table`, keyed on `(cur_slice, dst_group)` →
   `(port, send_slice, next_tor, alternate_port, alternate_slot,
   alternate_next_tor)`. If the primary port's queue depth exceeds
   `p{i}_max_lossless_qdepth_reg`, ADM reroutes to the alternate. AFC
   pause/resume control words are pre-staged in `set_afc_tb` so upstream ports
   pause before queues overflow.
-- **VLB** — two generic sentinels in `routing.p4` (not VLB-specific):
-  `send_port == 0xff` → `tb_random_to_port` picks a port;
-  `send_slice == 255` → `cal_port_slice_to_node` resolves a node to
-  `(port, slice)`.
-- **Source routing** — an `optics_sr` header carries a hop list (≤ 2 hops).
-  Each hop is consumed at the relevant ToR.
+- **Routing modes** — selectable via `deploy_routing(..., routing_mode=...)`.
+  `"Per-hop"`: each ToR on the path independently looks up its own
+  `time_flow_table`. `"Source"`: the ingress ToR attaches an `optics_sr`
+  header carrying the full hop list (≤ 2 hops); each downstream ToR consumes
+  one hop as the packet traverses the path.
+- **Next-node-based forwarding** — a `time_flow_table` entry can name a
+  target node instead of encoding an exact slot. The sentinel
+  `send_slice == 255` triggers `cal_port_slice_to_node`, which resolves the
+  named node to a concrete `(port, send_slice)` pair at forwarding time using
+  the current schedule. Both the egress port and send slice are chosen at
+  runtime rather than baked into the entry.
+- **Random-port forwarding** — entries with `send_port == 0xff` trigger
+  `tb_random_to_port`, which picks an egress port uniformly at random and
+  sends in the current slice (e.g. VLB's randomized first hop to spread load
+  across uplinks).
+
+The last two are orthogonal to the routing mode and can appear in per-hop or
+source-routed paths.

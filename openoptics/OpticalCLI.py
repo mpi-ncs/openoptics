@@ -135,7 +135,7 @@ class OpticalCLI(cmd.Cmd):
             print("e.g. connect 0 1 2 or connect 0 h1 h2")
             return
 
-        self.base_network.dashboard.update_topo(self.base_network.slice_to_topo)
+        self.base_network.dashboard.update_topology(self.base_network.slice_to_topo)
         self.base_network.deploy_topo()
         self.base_network.activate_calendar_queue()
 
@@ -183,7 +183,7 @@ class OpticalCLI(cmd.Cmd):
             print("e.g. disconnect 0 1 2 or disconnect 0 h1 h2")
             return
 
-        self.base_network.dashboard.update_topo(self.base_network.slice_to_topo)
+        self.base_network.dashboard.update_topology(self.base_network.slice_to_topo)
         self.base_network.deploy_topo()
         self.base_network.activate_calendar_queue()
 
