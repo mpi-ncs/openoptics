@@ -41,6 +41,7 @@ if __name__ == "__main__":
     node3_entries = []
 
     # Load flow table entries to ToR 0-3
+    net.setup_nodes()
     net.add_time_flow_entry(node_id=0, entries=node0_entries)
     net.add_time_flow_entry(node_id=1, entries=node1_entries)
     net.add_time_flow_entry(node_id=2, entries=node2_entries)

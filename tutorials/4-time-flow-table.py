@@ -15,7 +15,7 @@ from openoptics.TimeFlowTable import TimeFlowHop, TimeFlowEntry
 
 if __name__ == "__main__":
     net = Toolbox.BaseNetwork(
-        name="task2",
+        name="task4",
         backend="Mininet",
         nb_node=4,
         time_slice_duration_ms=256,  # in ms
@@ -41,6 +41,7 @@ if __name__ == "__main__":
     ]
     node1_entries = []
 
+    net.setup_nodes()
     net.add_time_flow_entry(node_id=0, entries=node0_entries)
     net.add_time_flow_entry(node_id=1, entries=node1_entries)
 
