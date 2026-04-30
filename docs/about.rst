@@ -19,7 +19,9 @@ Former Contributors:
 
 `Alexander Liggesmeyer <https://alexander.liggesmeyer.net/>`_, former intern at MPI-INF, now at CISPA.
 
-Linshu Yang, former intern at MPI-INF, now at UIUC.
+`Linshu Yang <https://mpi.run/>`_, former intern at MPI-INF, now at UIUC.
+
+`Jaideep M. More <https://phoenix009.github.io/>`_, former intern at MPI-INF.
 
 Contact:
 --------

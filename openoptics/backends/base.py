@@ -8,8 +8,36 @@
 # License text: Creative Commons NC BY SA 4.0
 # https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en
 
+import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import Optional
+
+
+def warn_if_overhead_exhausts_slice(
+    *,
+    guardband_us: int,
+    slice_duration_us: int,
+    link_delay_us: int = 0,
+    backend_name: str,
+) -> None:
+    """Warn if per-slice timing overhead leaves no room for payload.
+
+    Each backend computes its own effective overhead and calls this once
+    from ``setup()``. Backends without a parameterized link delay (Tofino,
+    or Mininet after it folds ``link_delay_ms`` into ``guardband_us``)
+    pass ``link_delay_us=0``.
+    """
+    overhead_us = guardband_us + link_delay_us
+    if overhead_us >= slice_duration_us:
+        delay_term = f" + link_delay_us ({link_delay_us})" if link_delay_us else ""
+        warnings.warn(
+            f"[{backend_name}] guardband_us ({guardband_us}){delay_term} "
+            f">= time_slice_duration_us ({slice_duration_us}); "
+            f"no packets will cross the OCS for this run.",
+            RuntimeWarning,
+            stacklevel=3,
+        )
 
 
 @dataclass
@@ -58,9 +86,51 @@ class BackendBase(ABC):
     supports_device_manager : bool
         If False, ``start_monitor()`` skips DeviceManager creation (which
         requires BMv2 Thrift).  Tofino uses BFRt gRPC instead.
+    supports_dashboard_without_device_manager : bool
+        If True, ``start_monitor()`` may still start the dashboard even when
+        there is no DeviceManager.  Simulator backends use this to publish
+        their own event-driven telemetry.
+    supports_cli : bool
+        If False, ``BaseNetwork.start()`` skips the interactive OpticalCLI
+        and calls ``self.run()`` on the backend instead.  Used by simulation
+        backends (ns-3) where there is no live network to interact with; the
+        whole scenario is scripted up front and ``run()`` just advances the
+        simulator.
     """
 
     supports_device_manager: bool = True
+    supports_dashboard_without_device_manager: bool = False
+    supports_cli: bool = True
+
+    # Maximum number of transmit hops the source-routing data plane can
+    # carry per packet. Set by each backend to its action/header limit
+    # (Mininet P4 SR header tops out at 3, Tofino's SR action at 2, ns-3
+    # ``OpenOpticsSourceRouteHeader::kMaxHops`` at 16). ``None`` = no
+    # declared cap; ``BaseNetwork.deploy_routing`` consults this when
+    # ``routing_mode="Source"`` and warns if any path exceeds it.
+    max_source_route_hops: Optional[int] = None
+
+    def run(self) -> None:
+        """Run the backend (simulator) to completion.
+
+        Only called by :meth:`BaseNetwork.start` when ``supports_cli`` is
+        False.  Default implementation is a no-op so non-simulator backends
+        don't need to override it.
+        """
+
+    def setup_dashboard(self, service) -> None:
+        """Wire backend-specific collectors / event sources into the dashboard.
+
+        Called by :meth:`BaseNetwork.start_monitor` after ``DashboardService``
+        has been created + epoched, and after any default
+        ``DeviceMetricCollector`` has been registered. Simulator backends
+        (ns-3) override this to register a Python sink and connect their
+        ns-3 ``TraceSource`` hooks. Default: no-op.
+
+        Args:
+            service: The live ``DashboardService``; use its
+                ``register_event_source`` / ``register_collector`` methods.
+        """
 
     @classmethod
     def accepted_kwargs(cls) -> set:
@@ -81,10 +151,7 @@ class BackendBase(ABC):
         nb_link: int,
         nb_time_slices: int,
         time_slice_duration_us: int,
-        guardband_ms: int,
-        tor_host_port: int,
-        host_tor_port: int,
-        tor_ocs_ports: list,
+        guardband_us: int,
         calendar_queue_mode: int,
         **backend_kwargs,
     ) -> None:

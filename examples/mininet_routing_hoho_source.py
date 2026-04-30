@@ -12,6 +12,6 @@ if __name__ == "__main__":
     )
     circuits = OpticalTopo.opera(nb_node=nb_node, nb_link=nb_link)
     assert net.deploy_topo(circuits)
-    paths = OpticalRouting.routing_hoho(net.get_topo(), max_hop=2)
+    paths = OpticalRouting.routing_hoho(net.get_topo())
     assert net.deploy_routing(paths, routing_mode="Source")
     net.start()

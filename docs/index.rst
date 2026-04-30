@@ -41,9 +41,10 @@ After deployment, users can monitor the network with OpenOptics Dashboard.
 .. image:: ../assets/dashboard.png
    :alt: OpenOptics Dashboard
 
-OpenOptics ships with two backends: a Mininet backend that runs optical DCNs
-as full software emulations on BMv2 switches, and a Tofino backend that
-deploys the same Python code onto real Tofino2 hardware.
+OpenOptics ships with three backends: a Mininet backend that runs optical
+DCNs as full software emulations on BMv2 switches, a Tofino backend that
+deploys the same Python code onto real Tofino2 hardware, and an ns-3 backend
+(under active development) for packet-level simulation.
 
 .. toctree::
    :maxdepth: 1
@@ -51,6 +52,7 @@ deploys the same Python code onto real Tofino2 hardware.
    quickstart
    installation
    tofino-backend
+   ns3-backend
    examples/examples
    tutorials/tutorial_index
    apis_index

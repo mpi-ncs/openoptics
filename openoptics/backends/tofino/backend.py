@@ -51,7 +51,12 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from openoptics.backends.base import BackendBase, SwitchHandle, TableEntry
+from openoptics.backends.base import (
+    BackendBase,
+    SwitchHandle,
+    TableEntry,
+    warn_if_overhead_exhausts_slice,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +82,9 @@ class TofinoBackend(BackendBase):
     """
 
     supports_device_manager = False
+    # Tofino SR action carries at most two hops; the load_table path also
+    # raises if a longer SR entry slips through.
+    max_source_route_hops = 2
 
     @classmethod
     def accepted_kwargs(cls) -> set:
@@ -148,10 +156,7 @@ class TofinoBackend(BackendBase):
         nb_link: int,
         nb_time_slices: int,
         time_slice_duration_us: int,
-        guardband_ms: int,
-        tor_host_port: int,
-        host_tor_port: int,
-        tor_ocs_ports: list,
+        guardband_us: int,
         calendar_queue_mode: int,
         config_file: Optional[str] = None,
         remote_workdir: str = "/tmp/openoptics",
@@ -173,6 +178,12 @@ class TofinoBackend(BackendBase):
         self._skip_deploy = skip_deploy
         self._build_p4 = build_p4
         self._duration_us = int(time_slice_duration_us)
+
+        warn_if_overhead_exhausts_slice(
+            guardband_us=int(guardband_us),
+            slice_duration_us=int(time_slice_duration_us),
+            backend_name="tofino",
+        )
 
         # Resolve tofino_repo path — defaults to this directory which
         # contains emulated-ocs/ and openoptics-tor/ subdirectories.
@@ -852,11 +863,16 @@ class TofinoBackend(BackendBase):
 
                 if len(hops) > 2:
                     raise ValueError(
-                        f"Tofino backend only supports source-routed paths of "
-                        f"up to 2 hops, got {len(hops)} hops for ToR {tor_id} "
-                        f"(cur_slice={cur_slice}, dst={dst}). Use "
-                        f"routing_hoho(..., max_hop=2) or switch to "
-                        f"routing_mode='Per-hop'."
+                        f"Tofino backend only supports source-routed paths "
+                        f"of up to 2 hops, got {len(hops)} hops for ToR "
+                        f"{tor_id} (cur_slice={cur_slice}, dst={dst}). "
+                        f"Use routing_hoho(..., max_hop=2) or switch to "
+                        f"routing_mode='Per-hop'. Failing fast here so a "
+                        f"hardware deployment isn't installed with a "
+                        f"partially populated source-routing table — "
+                        f"silent SR misses fall through and would "
+                        f"blackhole traffic on the affected "
+                        f"(dst, arrival_ts) keys."
                     )
 
                 hop_json = []

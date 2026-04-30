@@ -19,6 +19,7 @@ def main() -> int:
         package="openoptics._bundled_examples",
         default_dest_name="examples",
         description="Copy the bundled OpenOptics examples into the current directory.",
+        extra_ignore_patterns=("*.csv", "*.json", "*.pdf"),
     )
 
 

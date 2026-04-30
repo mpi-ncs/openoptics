@@ -30,7 +30,7 @@ def _make_cli(nb_node=4):
     mock_net = MagicMock()
     mock_net._backend = backend
     mock_net.device_manager = MagicMock()
-    mock_net.time_slice_duration_ms = 128
+    mock_net.time_slice_duration_us = 128_000
     mock_net.nb_time_slices = 3
     mock_net.arch_mode = "TO"
 

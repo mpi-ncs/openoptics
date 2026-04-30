@@ -36,6 +36,7 @@ openoptics-gen-config        = "openoptics.backends.tofino.gen_config:main"
 openoptics-gen-examples      = "openoptics._cli.gen_examples:main"
 openoptics-gen-tutorials     = "openoptics._cli.gen_tutorials:main"
 openoptics-dashboard-clean   = "openoptics._cli.clean_dashboard:main"
+openoptics-install-ns3       = "openoptics.backends.ns3.install:main"
 
 [project.urls]
 Homepage = "https://openoptics.mpi-inf.mpg.de"
@@ -105,9 +106,13 @@ packages = [
     "openoptics-tor/**/*",
 ]
 "openoptics.backends.ns3" = [
+    # Our contrib module ships as package data; `openoptics-install-ns3` symlinks
+    # the installed `src/` into <NS3_DIR>/contrib/openoptics so `./ns3 build`
+    # picks up CMakeLists.txt + the C++ sources automatically.
+    "src/CMakeLists.txt",
+    "src/**/CMakeLists.txt",
     "src/**/*.cc",
     "src/**/*.h",
-    "CMakeLists.txt",
 ]
 "openoptics.dashboard.storage" = [
     "*.sql",
@@ -120,7 +125,6 @@ packages = [
     "*.py",
     "*.md",
     "*.sh",
-    "*.pdf",
     "*.toml",
 ]
 "openoptics._bundled_tutorials" = [
@@ -152,4 +156,9 @@ packages = [
 # from the wheel. Keep it in the repo for contributors; don't ship it on PyPI.
 "openoptics.backends.mininet" = [
     "targets/**",
+]
+"openoptics._bundled_examples" = [
+    "*.csv",
+    "*.json",
+    "*.pdf",
 ]

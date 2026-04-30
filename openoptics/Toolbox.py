@@ -10,6 +10,7 @@
 
 import os
 import time
+import warnings
 
 import networkx as nx
 import openoptics.utils as utils
@@ -43,11 +44,12 @@ class BaseNetwork:
         backend="Mininet",
         time_slice_duration_us=None,
         time_slice_duration_ms=None,
-        guardband_ms=25,
+        guardband_us=None,
+        guardband_ms=None,
         arch_mode="TO",  # TO for traffic-oblivious, TA for traffic-aware
         use_webserver=True,
-        ocs_tor_link_bw=1000,
-        tor_host_link_bw=1000,
+        ocs_tor_link_bw_gbps: float = 1.0,
+        tor_host_link_bw_gbps: float = 1.0,
         **backend_kwargs,
     ):
         """
@@ -61,12 +63,14 @@ class BaseNetwork:
             nb_host_per_tor (int, optional): Number of hosts per ToR (defaults to 1)
             time_slice_duration_us (int, optional): Duration of each time slice in microseconds
             time_slice_duration_ms (int, optional): Duration of each time slice in milliseconds
-                Exactly one of time_slice_duration_us or time_slice_duration_ms must be provided.
-            guardband_ms (int, optional): Guard band in milliseconds (defaults to 25)
+                Specify at most one of time_slice_duration_us or time_slice_duration_ms (default 128 ms).
+            guardband_us (int, optional): Guard band in microseconds
+            guardband_ms (int, optional): Guard band in milliseconds
+                Specify at most one of guardband_us or guardband_ms (default 25 ms).
             arch_mode (str, optional): architecture mode: "TO" or "TA" (defaults to "TO")
             use_webserver (bool, optional): Whether to use web server for dashboard (defaults to True)
-            ocs_tor_link_bw (int, optional): Bandwidth in Mbps for OCS↔ToR links (defaults to 1000)
-            tor_host_link_bw (int, optional): Bandwidth in Mbps for ToR↔host links (defaults to 1000)
+            ocs_tor_link_bw_gbps (float, optional): Bandwidth in Gbps for OCS↔ToR links (defaults to 1.0)
+            tor_host_link_bw_gbps (float, optional): Bandwidth in Gbps for ToR↔host links (defaults to 1.0)
             **backend_kwargs: Backend-specific parameters (e.g. ``link_delay_ms`` for
                 Mininet/ns-3).  Validated immediately against the selected backend's
                 ``accepted_kwargs()``; unknown names raise ``ValueError``.
@@ -80,7 +84,9 @@ class BaseNetwork:
         self.name = name
         self.nb_time_slices = 1
 
-        # Accept either us or ms; store internally as microseconds
+        # Time slice and guardband: accept either µs or ms, store canonical µs
+        # only. Backends receive the µs form via setup() and convert if their
+        # underlying runtime is ms-only (e.g. Mininet's BMv2 CLI).
         if time_slice_duration_us is not None and time_slice_duration_ms is not None:
             raise ValueError("Specify only one of time_slice_duration_us or time_slice_duration_ms.")
         if time_slice_duration_us is not None:
@@ -90,7 +96,15 @@ class BaseNetwork:
         else:
             self.time_slice_duration_us = 128_000  # default: 128 ms
 
-        self.guardband_ms = guardband_ms
+        if guardband_us is not None and guardband_ms is not None:
+            raise ValueError("Specify only one of guardband_us or guardband_ms.")
+        if guardband_us is not None:
+            self.guardband_us = int(guardband_us)
+        elif guardband_ms is not None:
+            self.guardband_us = int(guardband_ms * 1000)
+        else:
+            self.guardband_us = 25_000  # default: 25 ms
+
         self.arch_mode = arch_mode
         self.calendar_queue_mode = 0 if arch_mode == "TO" else 1
 
@@ -101,16 +115,13 @@ class BaseNetwork:
         self.nodes_created = False
 
         self.use_webserver = use_webserver
-        self.ocs_tor_link_bw = ocs_tor_link_bw
-        self.tor_host_link_bw = tor_host_link_bw
+        self.ocs_tor_link_bw_gbps = float(ocs_tor_link_bw_gbps)
+        self.tor_host_link_bw_gbps = float(tor_host_link_bw_gbps)
 
         # Always present so callers can invoke dashboard methods unconditionally;
         # start_monitor() replaces this with a real DashboardService when
         # use_webserver=True.
         self.dashboard = NullDashboard()
-
-        # Backward-compat alias
-        self.time_slice_duration_ms = self.time_slice_duration_us / 1000
 
         self._backend = create_backend(backend)
 
@@ -138,12 +149,17 @@ class BaseNetwork:
         """
         Start OpenOptics DeviceManager and Dashboard.
 
-        Initialises the monitoring system and starts the web dashboard if
-        ``use_webserver`` is enabled. The dashboard runs in-process on the
-        host and port configured by :class:`DashboardConfig` (default
-        ``localhost:8001``).
+        Initialises the monitoring system and starts the web dashboard when
+        ``use_webserver`` is enabled and the selected backend can feed it
+        metrics. The dashboard runs in-process on the host and port configured
+        by :class:`DashboardConfig` (default ``localhost:8001``).
         """
-        if self.use_webserver:
+        dashboard_enabled = self.use_webserver and (
+            self._backend.supports_device_manager
+            or getattr(self._backend, "supports_dashboard_without_device_manager", False)
+        )
+
+        if dashboard_enabled:
             from openoptics.dashboard.collectors import ReconfigEventPublisher
             reconfig_publisher = ReconfigEventPublisher()
         else:
@@ -159,23 +175,32 @@ class BaseNetwork:
         else:
             self.device_manager = None
 
-        if self.use_webserver and self.device_manager is not None:
+        if dashboard_enabled:
             from openoptics.dashboard import DashboardConfig, DashboardService
-            from openoptics.dashboard.collectors import DeviceMetricCollector
 
             self.dashboard = DashboardService(DashboardConfig.from_env())
             self.dashboard.begin_epoch()
             self.dashboard.update_topology(self.slice_to_topo)
-            self.dashboard.register_collector(DeviceMetricCollector(
-                self.device_manager,
-                nb_port=self.nb_link,
-                nb_queue=(
-                    self.nb_time_slices
-                    if self.calendar_queue_mode == 0
-                    else self.nb_node
-                ),
-                interval_s=self.dashboard.config.poll_interval_s,
-            ))
+
+            # Mininet-style polling collector (needs a live DeviceManager).
+            if self.device_manager is not None:
+                from openoptics.dashboard.collectors import DeviceMetricCollector
+                self.dashboard.register_collector(DeviceMetricCollector(
+                    self.device_manager,
+                    nb_port=self.nb_link,
+                    nb_queue=(
+                        self.nb_time_slices
+                        if self.calendar_queue_mode == 0
+                        else self.nb_node
+                    ),
+                    interval_s=self.dashboard.config.poll_interval_s,
+                ))
+
+            # Backend-specific wiring: simulator backends register their own
+            # event-source sinks and connect ns-3 TraceSources. Default is a
+            # no-op; Ns3Backend overrides.
+            self._backend.setup_dashboard(self.dashboard)
+
             self.dashboard.register_event_source(reconfig_publisher)
             self.dashboard.start()
 
@@ -204,15 +229,30 @@ class BaseNetwork:
             nb_link=self.nb_link,
             nb_time_slices=self.nb_time_slices,
             time_slice_duration_us=self.time_slice_duration_us,
-            guardband_ms=self.guardband_ms,
-            tor_host_port=self.tor_host_port,
-            host_tor_port=self.host_tor_port,
-            tor_ocs_ports=self.tor_ocs_ports,
+            guardband_us=self.guardband_us,
             calendar_queue_mode=self.calendar_queue_mode,
-            ocs_tor_link_bw=self.ocs_tor_link_bw,
-            tor_host_link_bw=self.tor_host_link_bw,
+            ocs_tor_link_bw_gbps=self.ocs_tor_link_bw_gbps,
+            tor_host_link_bw_gbps=self.tor_host_link_bw_gbps,
             **self._backend_kwargs,
         )
+
+    def udp_traffic(self, **defaults):
+        """Return a UDP traffic builder when the selected backend supports it."""
+        traffic_builder = getattr(self._backend, "udp_traffic", None)
+        if not callable(traffic_builder):
+            raise NotImplementedError(
+                "udp_traffic() is currently supported only by the ns-3 backend"
+            )
+        return traffic_builder(**defaults)
+
+    def tcp_traffic(self, **defaults):
+        """Return a TCP traffic builder when the selected backend supports it."""
+        traffic_builder = getattr(self._backend, "tcp_traffic", None)
+        if not callable(traffic_builder):
+            raise NotImplementedError(
+                "tcp_traffic() is currently supported only by the ns-3 backend"
+            )
+        return traffic_builder(**defaults)
 
     def cal_node_port_to_ocs_port(self, node_id, port_id):
         """
@@ -285,9 +325,16 @@ class BaseNetwork:
 
         Traffic Oblivious. Initializes DeviceManager, starts CLI, and handles
         network shutdown.
+
+        Simulator-style backends (``supports_cli == False``) skip the
+        interactive CLI and drive the backend's own ``run()`` instead; this
+        path is taken by the ns-3 backend.
         """
         self.start_monitor()
-        self.start_cli()
+        if getattr(self._backend, "supports_cli", True):
+            self.start_cli()
+        else:
+            self._backend.run()
         self.stop_network()
 
     def start_traffic_aware(
@@ -629,6 +676,26 @@ class BaseNetwork:
 
         # Load utility tables into ToR switches (ip_to_dst, arrive_at_dst, etc.)
         self.setup_nodes()
+
+        if routing_mode == "Source":
+            cap = getattr(self._backend, "max_source_route_hops", None)
+            if cap is not None:
+                offending = [p for p in paths if len(p.steps) > cap]
+                if offending:
+                    longest = max(len(p.steps) for p in offending)
+                    sample = offending[0]
+                    warnings.warn(
+                        f"[deploy_routing] {len(offending)}/{len(paths)} "
+                        f"source-routed paths exceed the "
+                        f"{type(self._backend).__name__} SR cap of {cap} "
+                        f"hops (longest={longest}, e.g. src={sample.src} "
+                        f"dst={sample.dst} arrival_ts={sample.arrival_ts}). "
+                        f"Bound the routing function "
+                        f"(`routing_hoho(..., max_hop={cap})`) or switch to "
+                        f"`routing_mode=\"Per-hop\"`.",
+                        RuntimeWarning,
+                        stacklevel=2,
+                    )
 
         if start_fresh:
             print("Loading routings...")

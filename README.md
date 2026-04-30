@@ -28,7 +28,7 @@ Under the hood, user configurations are converted to control plane programs and 
 Supported backends:
 - **Mininet** — full software emulation using BMv2 software switches and Mininet networks.
 - **Tofino** — deployment on Intel Tofino2 programmable switches (SDE 9.12.0). See [docs/tofino-backend.md](docs/tofino-backend.md).
-- **ns-3** — packet-level simulation (scaffold; under active development).
+- **ns-3** — in-process packet-level simulation via ns-3's Python bindings. Today: one host per ToR, TIME_BASED calendar queue; per-hop and source routing (direct / HoHo / VLB) + live dashboard. See [docs/ns3-backend.md](docs/ns3-backend.md).
 
 # Quick Start
 
@@ -65,7 +65,7 @@ Container" after `git clone`ing this repo (`.devcontainer/` wires up the same
 image).
 
 If you'd rather build the image yourself or install editable from source,
-see the [build-from-source section in `docs/installation.md`](docs/installation.md#advanced-build-from-source).
+see the [Mininet source-build section in `docs/installation.md`](docs/installation.md#build-mininet-backend-docker-image-manually).
 
 ## For the Tofino backend: `pip install` (no Docker)
 
@@ -83,6 +83,42 @@ openoptics-gen-config            # writes ./openoptics-tofino.toml
 See [docs/tofino-backend.md](docs/tofino-backend.md) for prerequisites and
 config details.
 
+## For the ns-3 backend: `pip install` + `openoptics-install-ns3`
+
+The ns-3 backend drives a local ns-3 build via its Python bindings. Our
+OpenOptics-specific primitives (OCS, ToR, calendar queue, ...) ship as a
+standard ns-3 **contrib module**, and the helper CLI links everything up:
+
+```bash
+# one-time system deps (ns-3's own build requirements; Debian/Ubuntu)
+sudo apt install g++ cmake python3-dev python3-setuptools \
+                 libgsl-dev libxml2-dev pkg-config
+
+pip install "openoptics-dcn[ns3]"
+
+# clones pinned ns-3 (default ns-3.44), symlinks our contrib module in,
+# and runs ./ns3 configure --enable-python-bindings && ./ns3 build
+openoptics-install-ns3 ~/ns-3-dev
+
+# wire up the two exports it prints at the end
+export NS3_DIR=~/ns-3-dev
+export PYTHONPATH=$NS3_DIR/build/bindings/python:$PYTHONPATH
+```
+
+Already have an ns-3 checkout you want to reuse? Pass `--skip-clone`:
+
+```bash
+openoptics-install-ns3 --skip-clone /path/to/existing/ns-3-dev
+```
+
+The ns-3 backend runs end-to-end for the supported capability envelope
+(one host per ToR, TIME_BASED calendar queue, per-hop and source
+routing). Traffic-aware (CONTROL_BASED) mode lands in M2. See
+[docs/ns3-backend.md](docs/ns3-backend.md) for the full walkthrough of
+the install pipeline, contrib-module layout, cppyy Python-binding load
+path, and the set of backend-specific kwargs (guardband, link delays,
+dashboard cadence, SR cur_node verification).
+
 ## Bundled resources (all installs)
 
 After `pip install`, these commands seed your working directory:
@@ -91,6 +127,7 @@ After `pip install`, these commands seed your working directory:
 openoptics-gen-examples          # examples/
 openoptics-gen-tutorials         # tutorials/
 openoptics-gen-config            # openoptics-tofino.toml (Tofino config template)
+openoptics-install-ns3           # clones + builds ns-3 with our contrib module (ns-3 backend only)
 ```
 
 # Usage
