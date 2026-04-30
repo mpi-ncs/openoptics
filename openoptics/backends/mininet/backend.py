@@ -13,6 +13,7 @@ import re
 import socket
 import sys
 import tempfile
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -25,7 +26,40 @@ from mininet.moduledeps import pathCheck
 from mininet.node import Host, Switch
 from mininet.util import pmonitor
 
-from openoptics.backends.base import BackendBase, SwitchHandle, TableEntry
+from openoptics.backends.base import (
+    BackendBase,
+    SwitchHandle,
+    TableEntry,
+    warn_if_overhead_exhausts_slice,
+)
+
+
+def _floor_us_to_ms_with_warn(name: str, value_us: int, *, min_ms: int = 0) -> int:
+    """Floor a µs value to ms, warning if precision is lost.
+
+    Mininet's BMv2 + tc/netem timing is ms-granular; sub-ms inputs would
+    be silently truncated otherwise. Raises ``ValueError`` if the floored
+    result drops below ``min_ms`` so callers can mark fields where 0 ms
+    is invalid (the BMv2 targets divide by ``time_slice_duration_ms``).
+    """
+    value_us = int(value_us)
+    value_ms = value_us // 1000
+    if value_ms < min_ms:
+        raise ValueError(
+            f"[mininet] {name}_us={value_us} floors to {value_ms} ms, "
+            f"below the supported minimum of {min_ms} ms — Mininet has "
+            f"no sub-ms timing. Use the ns-3 backend for µs-scale slices."
+        )
+    if value_us % 1000 != 0:
+        warnings.warn(
+            f"[mininet] {name}_us={value_us} is not a whole number of "
+            f"milliseconds; Mininet has no sub-ms timing — flooring to "
+            f"{value_ms} ms.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+    return value_ms
+
 
 # ---------------------------------------------------------------------------
 # P4 switch / host implementations
@@ -282,6 +316,11 @@ class _QuietTCLink(TCLink):
 class MininetBackend(BackendBase):
     """Mininet + BMv2 backend for OpenOptics."""
 
+    # P4 ToR program (p4src/tor/tor.p4) carries source-routed paths via
+    # source_routing_{1,2,3}_t headers — three-hop SR is the deepest the
+    # parser/MATs can install.
+    max_source_route_hops = 3
+
     _CLI_PATH = "/behavioral-model/targets/simple_switch/runtime_CLI"
 
     _BACKEND_DIR = Path(__file__).resolve().parent
@@ -331,19 +370,27 @@ class MininetBackend(BackendBase):
         nb_link,
         nb_time_slices,
         time_slice_duration_us,
-        guardband_ms,
-        tor_host_port,
-        host_tor_port,
-        tor_ocs_ports,
+        guardband_us,
         calendar_queue_mode,
         link_delay_ms=0,
-        ocs_tor_link_bw=1000,
-        tor_host_link_bw=1000,
+        ocs_tor_link_bw_gbps: float = 1.0,
+        tor_host_link_bw_gbps: float = 1.0,
         **backend_kwargs,
     ) -> None:
         """Create the Mininet topology and start the network."""
-        time_slice_duration_ms = time_slice_duration_us // 1000
+        time_slice_duration_ms = _floor_us_to_ms_with_warn(
+            "time_slice_duration", time_slice_duration_us, min_ms=1
+        )
+        guardband_ms = _floor_us_to_ms_with_warn("guardband", guardband_us)
         guardband_ms = guardband_ms + link_delay_ms
+        warn_if_overhead_exhausts_slice(
+            guardband_us=guardband_ms * 1000,
+            slice_duration_us=time_slice_duration_us,
+            backend_name="mininet",
+        )
+        # Mininet's addLink(bw=...) wants Mbps; convert from Gbps once.
+        ocs_tor_link_bw_mbps = int(round(ocs_tor_link_bw_gbps * 1000))
+        tor_host_link_bw_mbps = int(round(tor_host_link_bw_gbps * 1000))
         os.system("mn -c > /dev/null 2>&1")
         print("Setting up Mininet network...")
 
@@ -387,9 +434,9 @@ class MininetBackend(BackendBase):
                     node1=ocs,
                     node2=tor_switch,
                     port1=ocs_port,
-                    port2=tor_ocs_ports[link_id],
+                    port2=link_id,
                     delay=f"{link_delay_ms}ms",
-                    bw=ocs_tor_link_bw,
+                    bw=ocs_tor_link_bw_mbps,
                 )
             thrift_port += 1
 
@@ -400,9 +447,9 @@ class MininetBackend(BackendBase):
                 topo.addLink(
                     node1=host,
                     node2=tor_switch,
-                    port1=host_tor_port,
-                    port2=tor_host_port,
-                    bw=tor_host_link_bw,
+                    port1=0,
+                    port2=nb_link,
+                    bw=tor_host_link_bw_mbps,
                     loss=0,
                 )
                 self._ip_to_tor[ip] = tor_id

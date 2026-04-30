@@ -11,10 +11,11 @@
 import json
 import heapq
 import networkx as nx
-from typing import List, Dict
+from typing import List, Dict, Optional
 import queue
 import copy
 import logging
+import warnings
 
 from openoptics.TimeFlowTable import Path, Step
 
@@ -357,12 +358,14 @@ def routing_direct(slice_to_topo: Dict[int, nx.Graph]) -> List[Path]:
 
 def _dijkstra_to_dst(slice_to_topo: Dict[int, nx.Graph], dst, max_hop):
     """
-    Backward Dijkstra on the time-expanded schedule graph, from a fixed
-    destination.  For every ``(src_tor, cur_slice)`` state it finds the
-    shortest-wait forwarding plan to ``dst`` using at most ``max_hop``
-    transmit edges, with full optimal substructure: if a packet at
-    ``(T, C)`` is on the shortest path to ``dst`` and the next state is
-    ``(T', C)``, then ``(T', C)``'s own stored plan is the matching subpath.
+    Backward 3D-state Dijkstra on the time-expanded schedule graph, from a
+    fixed destination.  For every ``(src_tor, cur_slice, h)`` state it
+    finds the shortest-wait plan to ``dst`` using at most ``h`` transmit
+    edges.  Optimal substructure does **not** hold across h levels: at the
+    same ``(T, C)``, two different h values can pick different next-hops
+    (both optimal at that h, but disagreeing in physical path).  See
+    ``_dijkstra_to_dst_unbounded`` for the substructure-respecting variant
+    used when ``routing_hoho(max_hop=None)``.
 
     Time-expanded graph
     -------------------
@@ -484,24 +487,123 @@ def _reconstruct_full_path(parent, start_state):
     return None
 
 
-def routing_hoho(slice_to_topo: Dict[int, nx.Graph], max_hop) -> list:
+def _dijkstra_to_dst_unbounded(slice_to_topo: Dict[int, nx.Graph], dst):
+    """2D-state backward Dijkstra over ``(T, C)`` — no hop budget.
+
+    Each ``(T, C)`` has a single parent in the resulting tree, so optimal
+    substructure holds by construction: walking the parent chain from any
+    ``(src, cs)`` traverses the same edges that an intermediate's own
+    stored ``(inter, cs')`` plan would walk.
+
+    Returns ``parent``, ``dist`` keyed on 2-tuples ``(T, C)``.
+    """
+    nb_ts = len(slice_to_topo)
+    any_topo = next(iter(slice_to_topo.values()))
+    is_directed = any_topo.is_directed() if hasattr(any_topo, "is_directed") else False
+
+    INF = float("inf")
+    dist: Dict[tuple, float] = {}
+    parent: Dict[tuple, tuple] = {}
+    pq: List[tuple] = []
+
+    for c in range(nb_ts):
+        state = (dst, c)
+        dist[state] = 0
+        parent[state] = None
+        heapq.heappush(pq, (0, state))
+
+    while pq:
+        d, state = heapq.heappop(pq)
+        if d > dist.get(state, INF):
+            continue
+        T, C = state
+
+        # Relax reverse-wait
+        prev_C = (C - 1 + nb_ts) % nb_ts
+        ns = (T, prev_C)
+        nd = d + 1
+        if nd < dist.get(ns, INF):
+            dist[ns] = nd
+            parent[ns] = (state, "wait", None)
+            heapq.heappush(pq, (nd, ns))
+
+        # Relax reverse-tx
+        slot_topo = slice_to_topo[C]
+        if is_directed:
+            candidates = slot_topo.predecessors(T)
+        else:
+            candidates = slot_topo.neighbors(T)
+        for T_prime in candidates:
+            if T_prime == T:
+                continue
+            port = find_send_port(slot_topo, T_prime, T)
+            if port is None:
+                continue
+            ns = (T_prime, C)
+            nd = d
+            if nd < dist.get(ns, INF):
+                dist[ns] = nd
+                parent[ns] = (state, "tx", port)
+                heapq.heappush(pq, (nd, ns))
+
+    return parent, dist
+
+
+def _reconstruct_full_path_2d(parent, start_state):
+    """Walk a 2D parent chain from ``start_state = (T, C)`` to dst."""
+    steps: List[Step] = []
+    cur = start_state
+    for _ in range(1024):
+        entry = parent.get(cur)
+        if entry is None:
+            return steps
+        next_state, edge_type, port = entry
+        if edge_type == "tx":
+            T, C = cur
+            next_T, _next_C = next_state
+            steps.append(
+                Step(
+                    cur_node=T,
+                    step_type="port",
+                    send_port=port,
+                    send_ts=C,
+                    send_node=next_T,
+                )
+            )
+        cur = next_state
+    return None
+
+
+def routing_hoho(
+    slice_to_topo: Dict[int, nx.Graph],
+    max_hop: Optional[int] = None,
+) -> list:
     """
     HoHo routing — shortest-path forwarding over the time-expanded
     schedule graph.
 
     For every ``(src, cur_slice, dst)`` the emitted path represents the
-    minimum-duration forwarding plan from ``(src, cur_slice)`` to ``dst``,
-    using up to ``max_hop`` transmit edges (additional waits are free).
-    By construction the generated paths have optimal substructure: if a
-    packet's plan from ``(src, cs)`` to ``dst`` goes through intermediate
-    ``(inter, cs')``, then ``inter``'s stored plan at ``cs'`` for the
-    same ``dst`` is the matching subpath.  This property is what makes
-    ``routing_mode="Per-hop"`` forwarding loop-free even when the table
-    lookup has no source-awareness.
+    minimum-duration forwarding plan from ``(src, cur_slice)`` to ``dst``.
+
+    Default (``max_hop=None``): unbounded 2D-state Dijkstra over
+    ``(T, C)``. Each state has a single parent in the resulting tree, so
+    optimal substructure holds by construction — the per-hop entry at any
+    intermediate is the same as the SR-stamped tail at that intermediate,
+    making Per-hop and Source forwarding modes physically equivalent.
+
+    With ``max_hop=int``: 3D-state Dijkstra over ``(T, C, h)`` that bounds
+    paths to at most ``max_hop`` transmit edges. **Optimal substructure no
+    longer holds**: at intermediate ``X``, the per-hop table stores
+    ``X``'s own ``(h=max_hop)`` plan, but the SR-stamped tail uses the
+    ``(h-1)``-plan. When the two differ, Per-hop forwarding takes a
+    different physical path than Source for transit traffic. Use
+    ``routing_mode="Source"`` if a hop bound is required.
 
     Args:
         slice_to_topo: Topology for each time slice
-        max_hop: Maximum number of transmit hops along any path
+        max_hop: Optional max transmit hops per path. ``None`` (default) =
+            unbounded, optimal substructure. ``int`` = bounded, breaks
+            substructure (warning emitted).
 
     Returns:
         A list of ``Path`` objects.  Each path's ``steps`` contains one
@@ -513,6 +615,33 @@ def routing_hoho(slice_to_topo: Dict[int, nx.Graph], max_hop) -> list:
     nodes = sorted(any_topo.nodes())
 
     paths: List[Path] = []
+
+    if max_hop is None:
+        for dst in nodes:
+            parent, _dist = _dijkstra_to_dst_unbounded(slice_to_topo, dst)
+            for src in nodes:
+                if src == dst:
+                    continue
+                for cs in range(nb_ts):
+                    start = (src, cs)
+                    if start not in parent:
+                        continue
+                    steps = _reconstruct_full_path_2d(parent, start)
+                    if not steps:
+                        continue
+                    paths.append(
+                        Path(src=src, arrival_ts=cs, dst=dst, steps=steps)
+                    )
+        return paths
+
+    warnings.warn(
+        "routing_hoho(max_hop=int) breaks optimal substructure: Per-hop and "
+        "Source forwarding take different physical paths for transit traffic. "
+        "Use routing_mode=\"Source\" if a hop bound is required, or pass "
+        "max_hop=None (the default) for the unbounded 2D-state Dijkstra "
+        "that preserves substructure by construction.",
+        stacklevel=2,
+    )
     for dst in nodes:
         parent, _dist = _dijkstra_to_dst(slice_to_topo, dst, max_hop)
         for src in nodes:

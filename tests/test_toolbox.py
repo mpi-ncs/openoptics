@@ -16,7 +16,19 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from helpers import FakeBackend
 from openoptics.Toolbox import BaseNetwork
+from openoptics.dashboard import NullDashboard
 from openoptics import OpticalRouting
+
+
+class DashboardlessBackend(FakeBackend):
+    supports_device_manager = False
+
+    def __init__(self, nb_node=4):
+        super().__init__(nb_node=nb_node)
+        self.setup_dashboard_called = False
+
+    def setup_dashboard(self, service):
+        self.setup_dashboard_called = True
 
 
 def _make_net(nb_node=4, nb_link=1, arch_mode="TO"):
@@ -31,6 +43,53 @@ def _make_net(nb_node=4, nb_link=1, arch_mode="TO"):
             use_webserver=False,
         )
     return net, backend
+
+
+# ---------------------------------------------------------------------------
+# ns-3 traffic builder facade
+# ---------------------------------------------------------------------------
+
+class TestTrafficBuilderFacade(unittest.TestCase):
+
+    def test_udp_traffic_delegates_to_backend(self):
+        net, backend = _make_net()
+        backend.udp_traffic = lambda **defaults: ("udp", defaults)
+
+        self.assertEqual(
+            net.udp_traffic(rate="10Mbps"),
+            ("udp", {"rate": "10Mbps"}),
+        )
+
+    def test_tcp_traffic_delegates_to_backend(self):
+        net, backend = _make_net()
+        backend.tcp_traffic = lambda **defaults: ("tcp", defaults)
+
+        self.assertEqual(
+            net.tcp_traffic(duration_s=0.5),
+            ("tcp", {"duration_s": 0.5}),
+        )
+
+    def test_traffic_builders_raise_for_unsupported_backend(self):
+        net, _ = _make_net()
+
+        with self.assertRaises(NotImplementedError):
+            net.udp_traffic()
+        with self.assertRaises(NotImplementedError):
+            net.tcp_traffic()
+
+
+class TestStartMonitorDashboardSelection(unittest.TestCase):
+
+    def test_webserver_default_skips_dashboard_without_metric_source(self):
+        backend = DashboardlessBackend(nb_node=2)
+        with patch("openoptics.Toolbox.create_backend", return_value=backend):
+            net = BaseNetwork(name="tofino_like", nb_node=2, use_webserver=True)
+
+        net.start_monitor()
+
+        self.assertIsNone(net.device_manager)
+        self.assertIsInstance(net.dashboard, NullDashboard)
+        self.assertFalse(backend.setup_dashboard_called)
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +366,45 @@ class TestBackendKwargsValidation(unittest.TestCase):
         from openoptics import OpticalTopo
         net.deploy_topo(OpticalTopo.round_robin(nb_node=2))
         self.assertEqual(backend.setup_kwargs_received.get("link_delay_ms"), 7)
+
+
+class TestUnitParameterResolution(unittest.TestCase):
+    """guardband_* and time_slice_duration_* are µs/ms-paired Toolbox kwargs.
+
+    Same shape: at most one of each pair may be passed; canonical state
+    is stored in microseconds; the millisecond aliases are not kept on
+    the instance.
+    """
+
+    def _make_with(self, **kwargs):
+        backend = FakeBackend(nb_node=2)
+        with patch("openoptics.Toolbox.create_backend", return_value=backend):
+            return BaseNetwork(name="t", nb_node=2, use_webserver=False, **kwargs)
+
+    def test_guardband_us_and_ms_mutually_exclusive(self):
+        with self.assertRaises(ValueError) as ctx:
+            self._make_with(guardband_ms=0, guardband_us=2)
+        self.assertIn("guardband", str(ctx.exception))
+
+    def test_time_slice_duration_us_and_ms_mutually_exclusive(self):
+        with self.assertRaises(ValueError) as ctx:
+            self._make_with(time_slice_duration_us=50, time_slice_duration_ms=1)
+        self.assertIn("time_slice_duration", str(ctx.exception))
+
+    def test_guardband_canonical_only(self):
+        net = self._make_with(time_slice_duration_us=50, guardband_ms=3)
+        self.assertEqual(net.guardband_us, 3000)
+        self.assertEqual(net.time_slice_duration_us, 50)
+        self.assertFalse(hasattr(net, "guardband_ms"))
+        self.assertFalse(hasattr(net, "time_slice_duration_ms"))
+
+    def test_guardband_us_input_stored_as_us(self):
+        net = self._make_with(time_slice_duration_us=50, guardband_us=2)
+        self.assertEqual(net.guardband_us, 2)
+
+    def test_guardband_default_is_25ms(self):
+        net = self._make_with(time_slice_duration_us=50)
+        self.assertEqual(net.guardband_us, 25_000)
 
 
 if __name__ == "__main__":

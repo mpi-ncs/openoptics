@@ -7,42 +7,15 @@ instead of a software emulation.
 
 This document covers:
 
-1. [What is supported today](#1-status)
-2. [User guide](#2-user-guide) — how to configure and run
-3. [System workflow](#3-system-workflow) — what happens under the hood
+1. [User guide](#1-user-guide) — how to configure and run
+2. [System workflow](#2-system-workflow) — what happens under the hood
+3. [Status](#3-status) — what is supported today
 
 ---
 
-## 1. Status
+## 1. User guide
 
-**Hardware target.** Tofino2, SDE 9.12.0. Each physical Tofino2 hosts up to four
-logical ToRs, one per pipe. The OCS is emulated on a separate Tofino2.
-
-**What works end-to-end on hardware:**
-
-| Area | Status |
-|---|---|
-| Deployment pipeline (SSH → SCP → `p4_build.sh` → `bf_switchd` → `bfshell`) | ✅ |
-| Jump-host SSH tunneling with paramiko | ✅ |
-| Parallel multi-ToR deployment | ✅ |
-| OCS emulation | ✅ |
-| ToR data plane: `time_flow_table`, calendar queues, AFC pause/resume, per-port queue-depth estimation | ✅ |
-| Admission-controlled reroute | ✅ |
-| Per-hop and source routing (≤ 2 hops) | ✅ |
-| Routing algorithms: Direct, VLB, HoHo, Opera | ✅ |
-| Built-in CLI: `server_check`, `server_ping`, `h0 ping h1` | ✅ |
-| Dashboard for collecting testbed telemetry (queue depth, drops, per-slice stats) | 🚧 TODO |
-
-Examples live under `examples/`: `tofino_4node_1link_direct.py`,
-`tofino_4node_1link_hoho.py`, `tofino_4node_1link_hoho_source.py`,
-`tofino_4node_1link_vlb_source.py`, `tofino_4node_2link_direct.py`,
-`tofino_4node_2link_hoho.py`, `tofino_4node_2link_vlb_source.py`.
-
----
-
-## 2. User guide
-
-### 2.1 Prerequisites
+### 1.1 Prerequisites
 
 | Requirement | Details |
 |---|---|
@@ -50,7 +23,7 @@ Examples live under `examples/`: `tofino_4node_1link_direct.py`,
 | Intel SDE | `bf-sde-9.12.0` installed at the path set in `[sde]` |
 | SSH access | Key-based SSH from your workstation to all switches (directly or via a jump host). Jump host needs a key on disk that can reach the switches. |
 
-### 2.2 Quick start
+### 1.2 Quick start
 
 Install the package and generate a config template in your project directory:
 
@@ -59,7 +32,7 @@ pip install "openoptics-dcn[tofino]"
 cd ~/my-testbed
 openoptics-gen-config                 # writes ./openoptics-tofino.toml
 # edit openoptics-tofino.toml to fill in USER, jumphost.example.com,
-# IPs, MACs, etc. for your testbed (see §2.3)
+# IPs, MACs, etc. for your testbed (see §1.3)
 ```
 
 Then reference that file as `config_file=` in your deployment script:
@@ -109,7 +82,7 @@ h0 ping h1             # same, via hN shorthand
 Press `Ctrl-D` to exit; `net.stop()` runs automatically and kills the remote
 processes (`pkill -9`).
 
-### 2.3 Config file
+### 1.3 Config file
 
 The backend reads a TOML config passed via `config_file=`. The easiest way to
 start is:
@@ -218,7 +191,7 @@ user = "p4"
   `host_*` fields. Servers can then send real traffic through the optical DCN
   (e.g. `ping`).
 
-### 2.4 `BaseNetwork` parameters for a Tofino deployment
+### 1.4 `BaseNetwork` parameters for a Tofino deployment
 
 "Common" parameters are shared with other backends (Mininet, ns-3); "Tofino"
 parameters are only accepted when `backend="Tofino"` (they flow through
@@ -241,9 +214,9 @@ The table lists the parameters most relevant to a Tofino run — see
 
 ---
 
-## 3. System workflow
+## 2. System workflow
 
-### 3.1 From Python to the wire
+### 2.1 From Python to the wire
 
 ```
  workstation                   jump host                 switches
@@ -283,7 +256,7 @@ The table lists the parameters most relevant to a Tofino run — see
 5. `net.start()` opens the interactive CLI. `net.stop()` SSHs back to each
    switch and runs `pkill -9 -x openoptics_tor ocs bfshell bf_switchd`.
 
-### 3.2 Runtime behavior
+### 2.2 Runtime behavior
 
 - **Emulated OCS** — a Tofino2 stands in for a real optical circuit switch.
   Pktgen generates rotation packets every `time_slice_duration_us`; the OCS
@@ -314,3 +287,30 @@ The table lists the parameters most relevant to a Tofino run — see
 
 The last two are orthogonal to the routing mode and can appear in per-hop or
 source-routed paths.
+
+---
+
+## 3. Status
+
+**Hardware target.** Tofino2, SDE 9.12.0. Each physical Tofino2 hosts up to four
+logical ToRs, one per pipe. The OCS is emulated on a separate Tofino2.
+
+**What works end-to-end on hardware:**
+
+| Area | Status |
+|---|---|
+| Deployment pipeline (SSH → SCP → `p4_build.sh` → `bf_switchd` → `bfshell`) | ✅ |
+| Jump-host SSH tunneling with paramiko | ✅ |
+| Parallel multi-ToR deployment | ✅ |
+| OCS emulation | ✅ |
+| ToR data plane: `time_flow_table`, calendar queues, AFC pause/resume, per-port queue-depth estimation | ✅ |
+| Admission-controlled reroute | ✅ |
+| Per-hop and source routing (≤ 2 hops) | ✅ |
+| Routing algorithms: Direct, VLB, HoHo, Opera | ✅ |
+| Built-in CLI: `server_check`, `server_ping`, `h0 ping h1` | ✅ |
+| Dashboard for collecting testbed telemetry (queue depth, drops, per-slice stats) | 🚧 TODO |
+
+Examples live under `examples/`: `tofino_4node_1link_direct.py`,
+`tofino_4node_1link_hoho.py`, `tofino_4node_1link_hoho_source.py`,
+`tofino_4node_1link_vlb_source.py`, `tofino_4node_2link_direct.py`,
+`tofino_4node_2link_hoho.py`, `tofino_4node_2link_vlb_source.py`.

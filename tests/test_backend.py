@@ -29,8 +29,7 @@ class _ConcreteBackend(BackendBase):
     """Minimal implementation to verify the interface."""
 
     def setup(self, *, nb_node, nb_host_per_tor, nb_link, nb_time_slices,
-              time_slice_duration_us, guardband_ms,
-              tor_host_port, host_tor_port, tor_ocs_ports,
+              time_slice_duration_us, guardband_us,
               calendar_queue_mode, **backend_kwargs):
         pass
 
@@ -103,8 +102,7 @@ class TestBackendBaseAbstract(unittest.TestCase):
         """A subclass that skips an abstract method must not instantiate."""
         class IncompleteBackend(BackendBase):
             def setup(self, *, nb_node, nb_host_per_tor, nb_link, nb_time_slices,
-                      time_slice_duration_us, guardband_ms,
-                      tor_host_port, host_tor_port, tor_ocs_ports,
+                      time_slice_duration_us, guardband_us,
                       calendar_queue_mode, **backend_kwargs): pass
             def get_switch(self, name): pass
             def switch_exists(self, name): pass
@@ -160,9 +158,10 @@ class TestAcceptedKwargs(unittest.TestCase):
 
 @unittest.skipUnless(HAS_MININET, "mininet not installed")
 class TestMininetBackendLinkBandwidth(unittest.TestCase):
-    """Verify ocs_tor_link_bw and tor_host_link_bw reach Mininet addLink()."""
+    """Verify ocs_tor_link_bw_gbps and tor_host_link_bw_gbps reach Mininet addLink()
+    (which takes bw in Mbps)."""
 
-    def _run_setup(self, ocs_tor_link_bw=1000, tor_host_link_bw=1000):
+    def _run_setup(self, ocs_tor_link_bw_gbps=1.0, tor_host_link_bw_gbps=1.0):
         from unittest.mock import MagicMock, patch, call
         from openoptics.backends.mininet.backend import MininetBackend
 
@@ -183,31 +182,97 @@ class TestMininetBackendLinkBandwidth(unittest.TestCase):
                 nb_link=1,
                 nb_time_slices=1,
                 time_slice_duration_us=128_000,
-                guardband_ms=25,
-                tor_host_port=1,
-                host_tor_port=0,
-                tor_ocs_ports=[0],
+                guardband_us=25_000,
                 calendar_queue_mode=0,
-                ocs_tor_link_bw=ocs_tor_link_bw,
-                tor_host_link_bw=tor_host_link_bw,
+                ocs_tor_link_bw_gbps=ocs_tor_link_bw_gbps,
+                tor_host_link_bw_gbps=tor_host_link_bw_gbps,
             )
 
         return mock_topo.addLink.call_args_list
 
     def test_ocs_tor_link_bw_passed_to_addlink(self):
-        calls = self._run_setup(ocs_tor_link_bw=5000)
+        # 5 Gbps → Mininet addLink(bw=5000) Mbps
+        calls = self._run_setup(ocs_tor_link_bw_gbps=5.0)
         ocs_tor_calls = [c for c in calls if c.kwargs.get("bw") == 5000]
         self.assertTrue(len(ocs_tor_calls) > 0, "Expected addLink call with bw=5000 for OCS-ToR link")
 
     def test_tor_host_link_bw_passed_to_addlink(self):
-        calls = self._run_setup(tor_host_link_bw=2000)
+        # 2 Gbps → Mininet addLink(bw=2000) Mbps
+        calls = self._run_setup(tor_host_link_bw_gbps=2.0)
         host_tor_calls = [c for c in calls if c.kwargs.get("bw") == 2000]
         self.assertTrue(len(host_tor_calls) > 0, "Expected addLink call with bw=2000 for host-ToR link")
 
     def test_default_bw_is_1000_for_both(self):
+        # default 1 Gbps → 1000 Mbps at addLink
         calls = self._run_setup()
         bw_values = [c.kwargs.get("bw") for c in calls if "bw" in c.kwargs]
         self.assertTrue(all(v == 1000 for v in bw_values), f"Expected all bw=1000, got {bw_values}")
+
+
+# ---------------------------------------------------------------------------
+# warn_if_overhead_exhausts_slice
+# ---------------------------------------------------------------------------
+
+class TestWarnIfOverheadExhaustsSlice(unittest.TestCase):
+
+    def test_warns_when_guardband_alone_exceeds_slice(self):
+        import warnings
+        from openoptics.backends.base import warn_if_overhead_exhausts_slice
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            warn_if_overhead_exhausts_slice(
+                guardband_us=1000,
+                slice_duration_us=500,
+                backend_name="tofino",
+            )
+        self.assertEqual(len(caught), 1)
+        self.assertTrue(issubclass(caught[0].category, RuntimeWarning))
+        self.assertIn("[tofino]", str(caught[0].message))
+        self.assertNotIn("link_delay_us", str(caught[0].message))
+
+    def test_warns_when_guardband_plus_link_delay_exceeds_slice(self):
+        import warnings
+        from openoptics.backends.base import warn_if_overhead_exhausts_slice
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            warn_if_overhead_exhausts_slice(
+                guardband_us=400,
+                slice_duration_us=500,
+                link_delay_us=200,
+                backend_name="ns3",
+            )
+        self.assertEqual(len(caught), 1)
+        self.assertIn("[ns3]", str(caught[0].message))
+        self.assertIn("link_delay_us (200)", str(caught[0].message))
+
+    def test_silent_when_overhead_fits(self):
+        import warnings
+        from openoptics.backends.base import warn_if_overhead_exhausts_slice
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            warn_if_overhead_exhausts_slice(
+                guardband_us=100,
+                slice_duration_us=1000,
+                link_delay_us=50,
+                backend_name="mininet",
+            )
+        self.assertEqual(caught, [])
+
+    def test_warns_at_exact_equality(self):
+        import warnings
+        from openoptics.backends.base import warn_if_overhead_exhausts_slice
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            warn_if_overhead_exhausts_slice(
+                guardband_us=500,
+                slice_duration_us=500,
+                backend_name="tofino",
+            )
+        self.assertEqual(len(caught), 1)
 
 
 if __name__ == "__main__":

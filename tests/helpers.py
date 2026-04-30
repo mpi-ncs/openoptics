@@ -39,8 +39,7 @@ class FakeBackend(BackendBase):
     # --- BackendBase abstract methods ---
 
     def setup(self, *, nb_node, nb_host_per_tor, nb_link, nb_time_slices,
-              time_slice_duration_us, guardband_ms,
-              tor_host_port, host_tor_port, tor_ocs_ports,
+              time_slice_duration_us, guardband_us,
               calendar_queue_mode, **backend_kwargs) -> None:
         self.setup_called = True
 

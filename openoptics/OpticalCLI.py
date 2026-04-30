@@ -35,7 +35,7 @@ class OpticalCLI(cmd.Cmd):
         self.prompt = "OpenOptics> "
         self.base_network = base_network
         self.device_manager = base_network.device_manager
-        self.slice_duration_ms = base_network.time_slice_duration_ms
+        self.slice_duration_ms = base_network.time_slice_duration_us / 1000
         self.nb_time_slices = base_network.nb_time_slices
 
         # Register backend-specific commands

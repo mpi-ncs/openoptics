@@ -21,6 +21,7 @@ def copy_bundle(
     package: str,
     default_dest_name: str,
     description: str,
+    extra_ignore_patterns: tuple[str, ...] = (),
 ) -> int:
     """Parse `-o/--output` and `--force`, then copy `package` out to disk."""
     parser = argparse.ArgumentParser(prog=prog, description=description)
@@ -58,6 +59,7 @@ def copy_bundle(
             dest,
             ignore=shutil.ignore_patterns(
                 "__pycache__", "*.pyc", "__init__.py", "core", "*.core",
+                *extra_ignore_patterns,
             ),
         )
     print(f"wrote {dest}")

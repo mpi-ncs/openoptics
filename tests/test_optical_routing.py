@@ -310,8 +310,11 @@ def _opera_4node_2link_topo():
 
 def _hoho_per_hop_table(slice_to_topo, max_hop=2):
     """Return (tor, cs, dst) -> (send_ts, send_port, next_tor)."""
+    import warnings
     from openoptics import utils
-    paths = OpticalRouting.routing_hoho(slice_to_topo, max_hop=max_hop)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        paths = OpticalRouting.routing_hoho(slice_to_topo, max_hop=max_hop)
     per_src = utils.path2entries(paths, routing_mode="Per-hop")
     table = {}
     for src, entries in per_src.items():
@@ -428,7 +431,10 @@ class TestRoutingHohoOptimalSubstructure(unittest.TestCase):
         subpath of the source's plan.
         """
         slice_to_topo = _opera_4node_1link_topo()
-        paths = OpticalRouting.routing_hoho(slice_to_topo, max_hop=2)
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            paths = OpticalRouting.routing_hoho(slice_to_topo, max_hop=2)
         # Per-hop entries from path2entries (keys on path.src, arrival_ts, dst)
         per_hop_first = {}
         for p in paths:
@@ -456,6 +462,50 @@ class TestRoutingHohoOptimalSubstructure(unittest.TestCase):
                 f"substructure mismatch: {p.src} path says {inter} should "
                 f"forward to {s1.send_node}, but {inter}'s own entry says "
                 f"{sub_next}")
+
+    def test_hoho_default_unbounded_has_substructure_on_dense_schedule(self):
+        """The default ``max_hop=None`` uses 2D Dijkstra → optimal
+        substructure holds even on dense schedules where the 3D
+        ``max_hop=int`` variant breaks it (see ns3_rtt_comparison).
+        """
+        circuits = OpticalTopo.opera(nb_node=8, nb_link=4)
+        slice_to_topo = _build_slice_to_topo(8, circuits)
+        paths = OpticalRouting.routing_hoho(slice_to_topo)  # default max_hop=None
+        by_key = {(p.src, p.dst, p.arrival_ts): p for p in paths}
+
+        multi_hop = 0
+        mismatches = 0
+        for P in paths:
+            if len(P.steps) < 2:
+                continue
+            multi_hop += 1
+            for i in range(1, len(P.steps)):
+                inter = P.steps[i].cur_node
+                inter_arrival = P.steps[i - 1].send_ts
+                Q = by_key.get((inter, P.dst, inter_arrival))
+                self.assertIsNotNone(Q,
+                    f"missing intermediate path at ({inter}, {inter_arrival}, "
+                    f"{P.dst})")
+                if (Q.steps[0].send_ts != P.steps[i].send_ts
+                        or Q.steps[0].send_port != P.steps[i].send_port):
+                    mismatches += 1
+
+        self.assertGreater(multi_hop, 0)
+        self.assertEqual(mismatches, 0,
+            "default routing_hoho should have full optimal substructure")
+
+    def test_hoho_max_hop_int_emits_warning(self):
+        """Passing an explicit ``max_hop`` int must warn — the bounded
+        variant breaks substructure, callers should use Source mode."""
+        import warnings
+        slice_to_topo = _opera_4node_1link_topo()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            OpticalRouting.routing_hoho(slice_to_topo, max_hop=2)
+        msgs = [str(w.message) for w in caught
+                if issubclass(w.category, UserWarning)]
+        self.assertTrue(any("optimal substructure" in m for m in msgs),
+                        f"expected substructure warning, got: {msgs}")
 
     def test_hoho_never_worse_than_direct(self):
         """For every (src, cs, dst) entry, the HoHo plan's total duration

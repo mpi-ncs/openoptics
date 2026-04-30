@@ -56,7 +56,7 @@ if __name__ == "__main__":
     circuits = OpticalTopo.opera(nb_node=nb_node, nb_link=nb_link, guardband=True)
     assert net.deploy_topo(circuits), "Topology deployment failed"
 
-    paths = OpticalRouting.routing_hoho(net.get_topo(), max_hop=2)
+    paths = OpticalRouting.routing_hoho(net.get_topo())
     assert net.deploy_routing(paths, routing_mode="Per-hop"), "Routing deployment failed"
 
     net.start()

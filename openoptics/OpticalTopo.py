@@ -513,10 +513,15 @@ def draw_topo(slice_to_topo):
     node_size = 1100  # passed to both nodes and edges so arrow heads stop
                       # at the actual node boundary, not the default 300.
     for time_slice, ax in enumerate(axs):
+        g = slice_to_topo[time_slice]
+        # Self-loops render as tiny arcs occluded by the node fill, so skip
+        # them in the image. They remain in the graph for routing/telemetry.
+        edges = [(u, v) for u, v in g.edges() if u != v]
         ax.set_facecolor(CARD_BG)
         nx.draw_networkx_edges(
-            slice_to_topo[time_slice],
+            g,
             pos=pos, ax=ax,
+            edgelist=edges,
             node_size=node_size,
             edge_color=EDGE_COLOR,
             width=2.0,
@@ -525,7 +530,7 @@ def draw_topo(slice_to_topo):
             alpha=0.9,
         )
         nx.draw_networkx_nodes(
-            slice_to_topo[time_slice],
+            g,
             pos=pos, ax=ax,
             node_color=NODE_FILL,
             edgecolors=NODE_BORDER,
@@ -533,7 +538,7 @@ def draw_topo(slice_to_topo):
             node_size=node_size,
         )
         nx.draw_networkx_labels(
-            slice_to_topo[time_slice],
+            g,
             pos=pos, ax=ax,
             font_color=LABEL_COLOR,
             font_family=FONT_FAMILY,

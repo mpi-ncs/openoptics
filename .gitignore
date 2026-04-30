@@ -10,6 +10,18 @@ behavioral-model/
 build
 dist/
 
+# Generated artifacts from example runs
+/rtt_comparison.csv
+/rtt_comparison.json
+/rtt_cdfs.pdf
+/tcp_circle_long_flows.csv
+/tcp_circle_long_flows.json
+/tcp_circle_fct_by_size.csv
+/tcp_circle_fct_by_size.pdf
+examples/*.csv
+examples/*.json
+examples/*.pdf
+
 # uv
 .ruff_cache
 .venv
@@ -41,6 +53,7 @@ docs/generated/
 docs/publish2dev.sh
 docs/publish2mpi.sh
 
-# Claude
+# Agent
 .claude/
 CLAUDE.md
+.codex
