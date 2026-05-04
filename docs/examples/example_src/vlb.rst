@@ -5,7 +5,7 @@ VLB [1]_ is an oblivious routing scheme that achieves provably optimal load bala
 VLB itself and its variants are used in many traffic-oblivious optical DCN architectures, such as RotorNet [2]_, Opera [3]_, and Sirius [4]_.
 In vanilla VLB, packets are first routed to an intermediate node selected randomly to achieve load balancing, 
 and then forwarded to the final destination node through a direct connection.
-You can use the :py:meth:`openoptics.OpticalRouting.routing_vlb` function to configure VLB routing.
+You can use the :py:func:`openoptics.OpticalRouting.routing_vlb` function to configure VLB routing.
 
 .. literalinclude:: ../../../examples/mininet_routing_vlb.py
    :language: python

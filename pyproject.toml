@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openoptics-dcn"
-version = "0.0.2"
+version = "0.0.3"
 description = "A research framework for designing, testing, and deploying optical datacenter networks"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -51,8 +51,28 @@ Paper = "https://arxiv.org/abs/2411.18319"
 # environment — `pip install mininet` only provides the Python side.  Use the
 # `ymlei/openoptics:latest` Docker image for a ready-to-go setup.
 mininet = ["openoptics-dcn[dashboard]", "mininet>=2.3.0.dev6", "thrift>=0.22.0"]
-tofino  = ["paramiko", "tomli; python_version < '3.11'"]
-ns3     = []
+# `tofino` and `ns3` inline the dashboard deps rather than chaining
+# `openoptics-dcn[dashboard]`: pip's resolver silently drops self-referential
+# extras during editable reinstalls, so the chain doesn't actually pull
+# matplotlib / fastapi / uvicorn / jinja2 in.  Keep these four lists in sync
+# with the standalone `dashboard` extra below.
+tofino  = [
+    "fastapi>=0.100",
+    "uvicorn[standard]>=0.23",
+    "jinja2>=3.1",
+    "matplotlib>=3.5",
+    "paramiko",
+    "tomli; python_version < '3.11'",
+]
+ns3     = [
+    "fastapi>=0.100",
+    "uvicorn[standard]>=0.23",
+    "jinja2>=3.1",
+    "matplotlib>=3.5",
+    # ns-3 Python bindings are cppyy-based since ns-3.37 — without this the
+    # backend's `import ns` raises at startup before any topology is built.
+    "cppyy",
+]
 viz = ["matplotlib>=3.5"]
 dashboard = [
     # FastAPI + Uvicorn replace Django + Channels + Redis: everything runs

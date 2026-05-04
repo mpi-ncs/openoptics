@@ -3,8 +3,9 @@ BaseNetwork
 
 .. currentmodule:: openoptics.Toolbox
 
-.. automodule:: openoptics.Toolbox.BaseNetwork
-.. automethod:: openoptics.Toolbox.BaseNetwork.__init__
+.. autoclass:: BaseNetwork
+   :no-members:
+.. automethod:: BaseNetwork.__init__
 
 User APIs
 -----------------
@@ -12,14 +13,13 @@ User APIs
 .. autosummary::
    :toctree: generated/
 
-   connect
-   disconnect
-   add_time_flow_entry
-   deploy_topo
-   deploy_routing
-   start
-   start_traffic_aware
-   activate_calendar_queue
-   pause_calendar_queue
-   get_topo
-
+   BaseNetwork.connect
+   BaseNetwork.disconnect
+   BaseNetwork.add_time_flow_entry
+   BaseNetwork.deploy_topo
+   BaseNetwork.deploy_routing
+   BaseNetwork.start
+   BaseNetwork.start_traffic_aware
+   BaseNetwork.activate_calendar_queue
+   BaseNetwork.pause_calendar_queue
+   BaseNetwork.get_topo

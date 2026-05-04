@@ -9,6 +9,7 @@ behavioral-model/
 *core
 build
 dist/
+venv_*
 
 # Generated artifacts from example runs
 /rtt_comparison.csv

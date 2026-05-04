@@ -88,7 +88,7 @@ Use `ping` to test connectivity and delay between hosts:
 For example:
 ```bash
 # The first host is named with h0
-OpenOptics-> h0 ping h1  # Equivalent to execute "ping h1" at h0
+OpenOptics> h0 ping h1  # Equivalent to executing "ping h1" at h0
 ```
 
 You should also see queue depth changes on the dashboard during the `ping` test.

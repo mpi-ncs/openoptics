@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # Tofino Backend — Internals and Known Gaps
 
 Audience: contributors working on the Tofino backend. User-facing documentation
@@ -121,8 +125,9 @@ Useful starting points:
 
 ## 2. Known gaps
 
-- **`tests/live_2tor_test.py`** is referenced in `CLAUDE.md` as the canonical
-  end-to-end test, but it is not yet in the repo. Landing it is the next task.
+- **End-to-end live test** (`tests/live_2tor_test.py`) — a reusable script that
+  deploys, brings up server NICs, and pings between servers — is planned but
+  not yet in the repo.
 - **Rank table refactor**: `tb_compute_p{i}_rank` is currently next-hop-keyed.
   Migrating to `send_slice`-keyed is cleaner and fixes rank for random VLB, but
   the current code works at 100 % so the refactor is deferred.

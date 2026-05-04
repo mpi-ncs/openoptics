@@ -40,8 +40,10 @@ TimeFlowEntry(dst=1, hops=TimeFlowHop(send_port=0))
 You can then add this flow table entry to a ToR switch (indexed by its node_id) using:
 
 ```python
-net.add_time_flow_entry(node_id, entry)
+net.add_time_flow_entry(node_id, entries=entry)
 ```
+
+`entries` accepts either a single `TimeFlowEntry` or a list of them.
 
 Please note that the above entry will be loaded at **ToR switches**, not OCSes.
 OCS does nothing else but transmitting received packets to a port based on the topology schedule.
@@ -56,6 +58,6 @@ You will now enable routing in your optical DCN:
 4. Test reachability again with ping: `h0 ping h1`, and check icmp_seq now.
 
 Run the script and test your solution in the CLI with `OpenOptics> h0 ping h1`:
-```python
+```bash
 python3 3-flow-table.py
 ```

@@ -19,7 +19,7 @@ The packet takes two hops:
 - At the next hop, it is forwarded out again at time slice 2.
 
 OpenOptics also provides helper functions to generate paths based on the topology schedule.
-For example, the default `my_routing` function in `tutorials/8-routing.py` generates direct paths for all node pairs with `find_direct_path()`
+For example, the default `my_routing` function in `tutorials/8-routings.py` generates direct paths for all node pairs with `find_direct_path()`
 ```
 paths = OpticalRouting.find_direct_path(slice_to_topo, node1, node2)
 ```
@@ -49,15 +49,12 @@ net.deploy_routing(paths, routing_mode="Source")
                      \______ light traffic _________/
                     between nodes in different groups
 
-	•	The applications are divided into two groups.
+- The applications are divided into two groups.
+- Group A = hosts 0–3; Group B = hosts 4–7.
+- Groups have denser intra-group communication and lighter inter-group communication.
+- Traffic ratio (intra-group : inter-group) = 2:1. (You don't need to worry about this for this task.)
 
-	•	Group A = hosts 0–3; Group B = hosts 4–7.
-
-	•	Groups have denser intra-group communication and lighter inter-group communication.
-
-	•	Traffic ratio (intra-group : inter-group) = 2:1. (You don’t need to worry about this for this task.)
-
-By default, the script `tutorials/8-routing.py` creates direct routing on all nodes.
+By default, the script `tutorials/8-routings.py` creates direct routing on all nodes.
 This leads to packet loss, since not all node pairs have direct connections.
 
 ## Your Goal
@@ -65,7 +62,7 @@ This leads to packet loss, since not all node pairs have direct connections.
 Design a routing scheme for the given topology that:
 
 1. Ensures no packet loss.
-2. **Bonus**: How much is your `ping`'s max RTT between `h0` and `h5`? Could you reduce it more? Share your tail `RTT` (reported by `OpenOptics-> test_task8_bonus`) with your peers.
+2. **Bonus**: How much is your `ping`'s max RTT between `h0` and `h5`? Could you reduce it more? Share your tail `RTT` (reported by `OpenOptics> test_task8_bonus`) with your peers.
 
 
 ```{note}
@@ -83,11 +80,11 @@ For attendees of the SIGCOMM'25 Tutorial: You may notice some packet loss on the
 To test your design in the OpenOptics CLI:
 
 ```bash
-OpenOptics-> test_task8
+OpenOptics> test_task8
 ```
 Or only run the bonus test:
 ```bash
-OpenOptics-> test_task8_bonus
+OpenOptics> test_task8_bonus
 ```
 
 You will see **PASS** if your solution meets all requirements.

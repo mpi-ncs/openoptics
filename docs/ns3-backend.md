@@ -2,7 +2,7 @@
 
 OpenOptics can drive the [ns-3](https://www.nsnam.org/) discrete-event network
 simulator as a third backend alongside Mininet and Tofino. The same Python
-API — `BaseNetwork`, `OpticalTopo.*`, `OpticalRouting.*` — writes unchanged; the
+API — `BaseNetwork`, `OpticalTopo.*`, `OpticalRouting.*` — is unchanged; the
 `backend="ns3"` switch replaces BMv2/hardware with packet-level simulation.
 
 This document covers:
@@ -32,8 +32,8 @@ regular Python process that loads ns-3 via its Python bindings.
 
 ```bash
 # 1. System deps (Debian/Ubuntu)
-sudo apt install -y g++ cmake pkg-config python3-dev \
-                    libgsl-dev libxml2-dev
+sudo apt install -y git g++ cmake pkg-config python3-dev \
+                    python3-setuptools libgsl-dev libxml2-dev
 
 # 2. OpenOptics itself
 pip install "openoptics-dcn[ns3]"

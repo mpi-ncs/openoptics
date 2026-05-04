@@ -7,7 +7,7 @@ All of this functionality is encapsulated in :py:meth:`openoptics.Toolbox.BaseNe
 specify the topology generation function and the routing algorithm they wish to use.
 The configuration workflow is nearly identical to the previous examples of traffic-oblivious architectures.
 
-Try ping between nodes, what do you observe on the dashboard?
+Try pinging between nodes — what do you observe on the dashboard?
 
 .. literalinclude:: ../../../examples/mininet_ta.py
    :language: python

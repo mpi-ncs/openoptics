@@ -27,7 +27,7 @@ Backends
 Time Flow Table
 -------------------------
 
-- Time flow table and Path defination for unifying diverse routings.
+- Time flow table and Path definition for unifying diverse routing.
 
    .. toctree::
       :maxdepth: 1

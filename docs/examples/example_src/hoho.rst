@@ -2,8 +2,8 @@ Fastest Path Routing
 =========================================
 
 This example demonstrates how to use OpenOptics library functions to implement URO [1]_/HOHO [2]_.
-URO routes packets through the fastest path on arbitary topologies.
-You can configure HOHO routing with :py:meth:`openoptics.OpticalRouting.routing_hoho`.
+URO routes packets through the fastest path on arbitrary topologies.
+You can configure HOHO routing with :py:func:`openoptics.OpticalRouting.routing_hoho`.
 
 .. literalinclude:: ../../../examples/mininet_routing_hoho_per_hop.py
    :language: python

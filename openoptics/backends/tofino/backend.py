@@ -47,6 +47,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -55,10 +56,16 @@ from openoptics.backends.base import (
     BackendBase,
     SwitchHandle,
     TableEntry,
-    warn_if_overhead_exhausts_slice,
 )
 
 logger = logging.getLogger(__name__)
+
+
+class ConfigurationError(ValueError):
+    """Raised when the Tofino config has placeholder sentinels or invalid timing.
+
+    Subclasses ValueError so existing ``except ValueError`` callers still catch it.
+    """
 
 
 class TofinoBackend(BackendBase):
@@ -179,12 +186,6 @@ class TofinoBackend(BackendBase):
         self._build_p4 = build_p4
         self._duration_us = int(time_slice_duration_us)
 
-        warn_if_overhead_exhausts_slice(
-            guardband_us=int(guardband_us),
-            slice_duration_us=int(time_slice_duration_us),
-            backend_name="tofino",
-        )
-
         # Resolve tofino_repo path — defaults to this directory which
         # contains emulated-ocs/ and openoptics-tor/ subdirectories.
         if tofino_repo:
@@ -195,6 +196,13 @@ class TofinoBackend(BackendBase):
         # Load config
         self._config = self._load_config(config_file)
         config = self._config
+
+        # Pre-flight: surface placeholder sentinels and broken timing as one
+        # actionable error before paramiko / deploy code paths fire.
+        self._validate_config(
+            guardband_us=int(guardband_us),
+            time_slice_duration_us=int(time_slice_duration_us),
+        )
 
         # Map each logical ToR to a Tofino pipeline (0–3) on its physical switch.
         # Each physical switch has 4 pipelines, so at most 4 ToRs per switch.
@@ -1145,6 +1153,108 @@ class TofinoBackend(BackendBase):
     def _mac_str_to_int(mac_str: str) -> int:
         """Convert 'e8:eb:d3:ed:c5:ee' to integer."""
         return int(mac_str.replace(":", ""), 16)
+
+    # Placeholder strings shipped in the config_4tor.toml template that
+    # `openoptics-gen-config` writes verbatim into the user's working
+    # directory. Match these so an unedited template produces a single
+    # actionable error instead of a paramiko gaierror.
+    _HOST_PLACEHOLDERS = frozenset({"OCS_SWITCH_IP", "TOR_SWITCH_IP"})
+    _MGMT_IP_RE = re.compile(r"SERVER\d*_MGMT_IP")
+
+    @classmethod
+    def _is_placeholder_host(cls, host: str) -> bool:
+        if not host:
+            return True
+        h = host.strip()
+        # RFC 2606: example.com / example.org are reserved for documentation,
+        # so any host in those domains is by definition a template value.
+        if h.endswith(".example.com") or h.endswith(".example.org"):
+            return True
+        return h in cls._HOST_PLACEHOLDERS
+
+    def _validate_config(
+        self,
+        *,
+        guardband_us: int,
+        time_slice_duration_us: int,
+    ) -> None:
+        """Fail fast on placeholder configs and overhead that nulls every slice.
+
+        Collects all problems into one ConfigurationError so the user sees the
+        full edit-list at once rather than fixing them one paramiko traceback
+        at a time.
+        """
+        issues: List[str] = []
+
+        # Timing — guardband consuming the entire slice leaves zero room for
+        # payload, which previously produced a misleading RuntimeWarning
+        # followed by a deploy crash deeper in the stack.
+        if guardband_us >= time_slice_duration_us:
+            issues.append(
+                f"timing: guardband_us ({guardband_us}) >= "
+                f"time_slice_duration_us ({time_slice_duration_us}); no payload "
+                f"can cross the OCS. Lower guardband_us or raise "
+                f"time_slice_duration_us when constructing BaseNetwork."
+            )
+
+        cfg = self._config or {}
+
+        jh = cfg.get("jump_host") or {}
+        if jh:
+            host = jh.get("host", "")
+            if self._is_placeholder_host(host):
+                issues.append(
+                    f"[jump_host].host is a template value ({host!r}); set it "
+                    f"to your jump host (or remove the [jump_host] section if "
+                    f"the switches are directly reachable)."
+                )
+            if jh.get("user") == "USER":
+                issues.append(
+                    "[jump_host].user is the placeholder 'USER'; set it to "
+                    "your jump-host login."
+                )
+
+        ocs = cfg.get("ocs_switch") or {}
+        if ocs and self._is_placeholder_host(ocs.get("host", "")):
+            issues.append(
+                f"[ocs_switch].host is a template value "
+                f"({ocs.get('host', '')!r}); set it to your OCS switch's "
+                f"IP/hostname."
+            )
+
+        for ps in cfg.get("physical_switch", []) or []:
+            name = ps.get("name", "?")
+            if self._is_placeholder_host(ps.get("host", "")):
+                issues.append(
+                    f"[[physical_switch]] '{name}' has placeholder host "
+                    f"({ps.get('host', '')!r}); set it to the ToR switch's "
+                    f"IP/hostname."
+                )
+            for tor_cfg in ps.get("logical_tor", []) or []:
+                mgmt = tor_cfg.get("server_mgmt_ip", "")
+                if mgmt and self._MGMT_IP_RE.fullmatch(mgmt.strip()):
+                    tid = tor_cfg.get("tor_id", "?")
+                    issues.append(
+                        f"logical_tor tor_id={tid} has placeholder "
+                        f"server_mgmt_ip ({mgmt!r}); set it or remove the "
+                        f"field."
+                    )
+
+        if (cfg.get("servers") or {}).get("user") == "USER":
+            issues.append(
+                "[servers].user is the placeholder 'USER'; set it to your "
+                "server SSH login."
+            )
+
+        if issues:
+            bullet = "\n  - "
+            raise ConfigurationError(
+                "Tofino backend config has placeholder/invalid values. Fix "
+                "these before deploying:" + bullet + bullet.join(issues)
+                + "\n\nIf this is a fresh install, run `openoptics-gen-config` "
+                "to write the template, then edit the generated file (or "
+                "point at a custom one with OPENOPTICS_CONFIG=<path>)."
+            )
 
     @staticmethod
     def _load_config(config_file: Optional[str]) -> dict:

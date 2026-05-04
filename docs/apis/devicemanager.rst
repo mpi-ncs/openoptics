@@ -1,10 +1,13 @@
 DeviceManager
 ==============
 
-.. automodule:: openoptics.DeviceManager.DeviceManager
-   
+.. currentmodule:: openoptics.DeviceManager
+
+.. autoclass:: openoptics.DeviceManager.DeviceManager
+   :no-members:
+
 .. autosummary::
    :toctree: generated/
-   
-   get_device_metric
-   set_active_queue
+
+   DeviceManager.get_device_metric
+   DeviceManager.set_active_queue

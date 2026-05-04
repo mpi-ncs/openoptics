@@ -14,9 +14,8 @@ Examples
    example_src/ta
    example_src/shale
 
-..
-   examples_src/routing_hoho
-   examples_src/routing_hoho_per_hop
-   examples_src/topo_opera
-   examples_src/topo_round_robin
-   examples_src/topo_shale
+.. note::
+
+   The pages above use the Mininet backend. ns-3 simulation examples and
+   Tofino hardware examples are listed in the corresponding backend guides:
+   :doc:`/ns3-backend` and :doc:`/tofino-backend`.

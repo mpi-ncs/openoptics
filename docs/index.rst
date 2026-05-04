@@ -30,7 +30,7 @@ which are then deployed to the underlying optical and P4-programmable switches.
 
    net = Toolbox.BaseNetwork(name="demo", backend="Mininet",
                              nb_node=8, time_slice_duration_ms=512)
-   circuits = OpticalTopo.round_robin(nb_node=nb_node)
+   circuits = OpticalTopo.round_robin(nb_node=8)
    net.deploy_topo(circuits)
    paths = OpticalRouting.routing_direct(net.get_topo())
    net.deploy_routing(paths, routing_mode="Per-hop")
@@ -44,7 +44,7 @@ After deployment, users can monitor the network with OpenOptics Dashboard.
 OpenOptics ships with three backends: a Mininet backend that runs optical
 DCNs as full software emulations on BMv2 switches, a Tofino backend that
 deploys the same Python code onto real Tofino2 hardware, and an ns-3 backend
-(under active development) for packet-level simulation.
+for packet-level simulation.
 
 .. toctree::
    :maxdepth: 1

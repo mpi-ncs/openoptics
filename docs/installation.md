@@ -5,7 +5,7 @@ to use.
 
 ## Mininet backend (Docker image + `pip install`)
 
-The Mininet backend needs components (e.g. BMv2 binaries) that pip cannot properly provide.
+The Mininet backend needs native components (e.g. BMv2 binaries) that pip cannot install.
 The `ymlei/openoptics:latest` Docker image ships all of that prebuilt. You
 add the Python package on top with `pip install`.
 
@@ -117,17 +117,6 @@ This pulls `networkx` and `numpy` and nothing else. Useful for algorithm
 development, unit testing with `tests/helpers.FakeBackend`, or running
 OpenOptics from a notebook.
 
-## Install extras reference
-
-| Extra | What it pulls | When you need it |
-|---|---|---|
-| *(none)* | `networkx`, `numpy` | Topology/routing algorithms, offline analysis |
-| `[mininet]` | `mininet`, `thrift`, + dashboard deps | Mininet backend (also requires BMv2 + `mn` — use the Docker image) |
-| `[tofino]` | `paramiko`, `tomli` (Py<3.11) | Tofino backend (deploys to switches over SSH) |
-| `[ns3]` | No extra Python packages | ns-3 backend (also requires `cppyy`, ns-3 build deps, and `openoptics-install-ns3`) |
-| `[viz]` | `matplotlib` | `OpticalTopo.plot_graph()` standalone |
-| `[all]` | All of the above | Combined install |
-
 ## Bundled CLI tools
 
 After `pip install`, these commands are on your `PATH`:
@@ -138,13 +127,13 @@ After `pip install`, these commands are on your `PATH`:
 | `openoptics-gen-tutorials` | Copies bundled `tutorials/` into current directory |
 | `openoptics-gen-config` | Writes an editable Tofino config template (`openoptics-tofino.toml`) |
 | `openoptics-install-ns3` | Clones/builds ns-3 and links the OpenOptics contrib module |
+| `openoptics-dashboard-clean` | Wipes dashboard history (SQLite DB + generated topology PNGs) under `$OPENOPTICS_STATE_DIR` |
 
 The `openoptics-gen-*` commands accept `-o PATH` and `--force`.
 
 ## Install from GitHub
 
-Use an editable GitHub install when you need unreleased Tofino or ns-3 backend
-changes, local examples/docs, or a source tree you can modify.
+Use an editable GitHub install when you want to modify OpenOptics.
 
 Start by cloning the repo:
 
@@ -171,7 +160,6 @@ sudo apt install -y git g++ cmake pkg-config python3-dev \
                     python3-setuptools libgsl-dev libxml2-dev
 
 pip install -e ".[ns3]"
-pip install cppyy
 openoptics-install-ns3 ~/ns-3-dev
 ```
 

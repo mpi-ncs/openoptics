@@ -30,6 +30,6 @@ This schedule guarantees that, over a period of time, each node can directly com
 You will implement your solution in `tutorials/2-connect.py`.
 Run the script to generate and visualize your topology schedule on the dashboard:
 
-```python
+```bash
 python3 2-connect.py
 ```

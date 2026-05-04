@@ -1,7 +1,7 @@
 About Us
 =================
 
-OpenOptics is built by network and cloud systems research group at Max Planck Institute for Informatics (MPI-INF).
+OpenOptics is built by the Network and Cloud Systems research group at the Max Planck Institute for Informatics (MPI-INF).
 
 Team:
 -----

@@ -22,13 +22,13 @@ Easy design, testing, and deployment of optical datacenter networks for everyone
 # What is OpenOptics?
 
 OpenOptics is a general framework for realizing different optical data center network architectures in a plug-and-play manner.
-With OpenOptics, users can deploy customized optical data center networks on the testbed, emulation, or simulation with ~10 lines of python code.
-Under the hood, user configurations are converted to control plane programs and deployed to the underlining OCSes and P4 switches.
+With OpenOptics, users can deploy customized optical data center networks on the testbed, emulation, or simulation with ~10 lines of Python code.
+Under the hood, user configurations are converted to control plane programs and deployed to the underlying OCSes and P4 switches.
 
 Supported backends:
 - **Mininet** — full software emulation using BMv2 software switches and Mininet networks.
 - **Tofino** — deployment on Intel Tofino2 programmable switches (SDE 9.12.0). See [docs/tofino-backend.md](docs/tofino-backend.md).
-- **ns-3** — in-process packet-level simulation via ns-3's Python bindings. Today: one host per ToR, TIME_BASED calendar queue; per-hop and source routing (direct / HoHo / VLB) + live dashboard. See [docs/ns3-backend.md](docs/ns3-backend.md).
+- **ns-3** — in-process packet-level simulation via ns-3's Python bindings. See [docs/ns3-backend.md](docs/ns3-backend.md).
 
 # Quick Start
 
@@ -91,7 +91,7 @@ standard ns-3 **contrib module**, and the helper CLI links everything up:
 
 ```bash
 # one-time system deps (ns-3's own build requirements; Debian/Ubuntu)
-sudo apt install g++ cmake python3-dev python3-setuptools \
+sudo apt install git g++ cmake python3-dev python3-setuptools \
                  libgsl-dev libxml2-dev pkg-config
 
 pip install "openoptics-dcn[ns3]"
@@ -99,11 +99,12 @@ pip install "openoptics-dcn[ns3]"
 # clones pinned ns-3 (default ns-3.44), symlinks our contrib module in,
 # and runs ./ns3 configure --enable-python-bindings && ./ns3 build
 openoptics-install-ns3 ~/ns-3-dev
-
-# wire up the two exports it prints at the end
-export NS3_DIR=~/ns-3-dev
-export PYTHONPATH=$NS3_DIR/build/bindings/python:$PYTHONPATH
 ```
+
+The installer records the chosen ns-3 checkout in `~/.openoptics/ns3_env.json`,
+so subsequent OpenOptics scripts pick it up automatically — no shell exports
+needed. To use `from ns import ns` directly outside OpenOptics, evaluate the
+exports the installer prints (or run `openoptics-install-ns3 --print-env-only ~/ns-3-dev`).
 
 Already have an ns-3 checkout you want to reuse? Pass `--skip-clone`:
 
@@ -112,12 +113,12 @@ openoptics-install-ns3 --skip-clone /path/to/existing/ns-3-dev
 ```
 
 The ns-3 backend runs end-to-end for the supported capability envelope
-(one host per ToR, TIME_BASED calendar queue, per-hop and source
-routing). Traffic-aware (CONTROL_BASED) mode lands in M2. See
+(one host per ToR, traffic-oblivious mode, per-hop and source routing).
+Traffic-aware mode and multi-host-per-ToR are in progress. See
 [docs/ns3-backend.md](docs/ns3-backend.md) for the full walkthrough of
 the install pipeline, contrib-module layout, cppyy Python-binding load
 path, and the set of backend-specific kwargs (guardband, link delays,
-dashboard cadence, SR cur_node verification).
+dashboard cadence, SR `cur_node` verification).
 
 ## Bundled resources (all installs)
 
@@ -145,8 +146,6 @@ h2 ping h3
 
 ## Defining Your Own Optical DCN with Python APIs
 
-![OpenOptics Diagram](https://raw.githubusercontent.com/mpi-ncs/openoptics/main/assets/openoptics-diagram.png)
-
 OpenOptics User APIs are located in `openoptics/Toolbox.py`.
 This file defines a number of useful functions for creating optical topologies, deploying routing, and monitoring the network.
 Every OpenOptics network is a `BaseNetwork` object:
@@ -160,7 +159,7 @@ net = Toolbox.BaseNetwork(
     use_webserver=True)
 ```
 
-You can use `connect(node1,port1,node2,port2,time_slice)` to connect ports of two nodes at the given time slice.
+You can use `connect(time_slice, node1, node2, port1, port2)` to connect ports of two nodes at the given time slice.
 ```python
 net.connect(node1=0,port1=0,node2=1,port2=0,time_slice=0)
 net.connect(node1=2,port1=0,node2=3,port2=0,time_slice=0)
@@ -190,7 +189,7 @@ net.deploy_routing(paths, routing_mode="Per-hop")
 Once you have created a `BaseNetwork` object, and defined its topology and routing, start the network by simply calling `net.start()`.
 Now run your Python file and your first optical DCN is deployed!
 
-`net.start()` launches a command line interface defined in `src/OpticalCLI.py`.
+`net.start()` launches a command line interface defined in `openoptics/OpticalCLI.py`.
 This CLI is an extension of Mininet's CLI, with added support for optical DCNs, e.g. to query the number of queued packets in switches and the network's packet loss rate. 
 
 You can find example scripts configuring different architectures under [examples/](examples/) — or, after `pip install`, run `openoptics-gen-examples` to copy them into your current directory.
@@ -200,7 +199,7 @@ You can find example scripts configuring different architectures under [examples
 ![OpenOptics Dashboard](https://raw.githubusercontent.com/mpi-ncs/openoptics/main/assets/dashboard.png)
 
 The dashboard starts automatically when you create a `BaseNetwork` with `use_webserver=True` (the default) — FastAPI + Uvicorn run in-process on the main Python interpreter, so no separate setup step is needed.
-In your web browser, visit http://0.0.0.0:8001 to view the dashboard.
+In your web browser, visit http://localhost:8001 to view the dashboard.
 The dashboard displays the network topology, along with realtime graphs of network performance served via WebSockets. 
 
 Note: If you're running OpenOptics at a remote machine, make sure to enable port forwarding by passing `-L8001:0.0.0.0:8001` to ssh.

@@ -26,17 +26,15 @@ The diagram below illustrates the application's traffic pattern:
                      \______ light traffic _________/
                     between nodes in different groups
 
-	•	The applications are divided into two groups.
+- The applications are divided into two groups.
+- Group A = hosts 0–3; Group B = hosts 4–7.
+- Groups have denser intra-group communication and lighter inter-group communication.
+- Traffic ratio (intra-group : inter-group) = 2:1. (You don't need to fit the topology perfectly to this ratio.)
 
-	•	Group A = hosts 0–3; Group B = hosts 4–7.
+By default, the script `tutorials/7-topologies.py` creates a round-robin topology across all nodes (you will modify this topology in this task):
 
-	•	Groups have denser intra-group communication and lighter inter-group communication.
-
-	•	Traffic ratio (intra-group : inter-group) = 2:1. (You don’t need to fit the topology perfectly to this ratio.)
-
-By default, the script tutorials/7-topology.py creates a round-robin topology across all nodes (you will modify this topology in the this task):
-	•	Each node connects directly to one other node per time slice.
-	•	Across all time slices, each node has a direct connection to every other node.
+- Each node connects directly to one other node per time slice.
+- Across all time slices, each node has a direct connection to every other node.
 
 ```{note}
 Run the script first and inspect the topology on the dashboard to understand the default round-robin schedule.  
@@ -67,7 +65,7 @@ You can complete this task using only `OpticalTopo.round_robin()` inside the top
 To test your design in the OpenOptics CLI:
 
 ```bash
-OpenOptics-> test_task7
+OpenOptics> test_task7
 ```
 
 You will see **PASS** if your solution satisfies all requirements.

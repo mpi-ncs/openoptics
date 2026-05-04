@@ -2,8 +2,9 @@ Quick Start
 ====================
 
 This guide walks through running the Mininet backend end-to-end in a Docker
-container. For the Tofino backend, see :doc:`tofino-backend`. For other
-install paths (plain ``pip install`` without Docker), see :doc:`installation`.
+container. For the Tofino backend, see :doc:`tofino-backend`. For the ns-3
+backend, see :doc:`ns3-backend`. For other install paths (plain ``pip install``
+without Docker), see :doc:`installation`.
 
 Requirements
 --------------
@@ -80,9 +81,6 @@ Press ``Ctrl-D`` to exit; the network tears itself down.
 Defining your own optical DCN with the Python API
 -------------------------------------------------
 
-.. image:: ../assets/openoptics-diagram.png
-   :alt: OpenOptics Diagram
-
 OpenOptics user APIs live in :mod:`openoptics.Toolbox`.
 This module defines the primitives for creating optical topologies, deploying
 routing, and monitoring the network. Every OpenOptics network is a
@@ -115,7 +113,7 @@ Mininet, ``link_delay_ms`` sets per-link propagation delay (default: 0):
        use_webserver=True,
    )
 
-Use ``connect(node1, port1, node2, port2, time_slice)`` to wire ports
+Use ``connect(time_slice, node1, node2, port1, port2)`` to wire ports
 explicitly:
 
 .. code-block:: python
@@ -152,7 +150,7 @@ CLI) with commands for querying queue depths, loss rates, and more.
 
 You can find more example scripts in ``./examples/`` after running
 ``openoptics-gen-examples``, or browse them in the repository at `examples/
-<https://github.com/mpi-ncs/openoptics/tree/release/examples>`_.
+<https://github.com/mpi-ncs/openoptics/tree/main/examples>`_.
 
 Monitor with the OpenOptics Dashboard
 -------------------------------------

@@ -11,40 +11,51 @@ Let’s first try this manually. Run the following script:
 ```bash
 python3 6-traffic-aware-1.py
 ```
-This script creates a network with one fixed topology, where only `h0-h3` and `h1-h2` are connected.
+This script creates a network with one fixed topology, where only ToR0–ToR3 and ToR1–ToR2 are directly connected.
 
-Your task is to make `ping` work between h1 and h3 by using `connect` and `disconnect` commands in the OpenOptics CLI.
+Your task is to make `ping` work between `h1` and `h3` by using `connect` and `disconnect` commands in the OpenOptics CLI.
 
-```bash
-OpenOptics> disconnect
-Usage: disconnect [<time_slice>] <node1_id> <node2_id> [<port1> <port2>]
-```
-Example: 
-- `disconnect 1 0 3`
-- `disconnect 1 h0 h3` 
-Both commands remove the connection at time slice `1` between `h0` and `h3`.
+For usage help, run:
+```text
+OpenOptics> help disconnect
+Disconnect two nodes by reconfiguring OCS.
 
-
-and 
-```bash
-OpenOptics> connect
-Usage: connect [<time_slice>] <node1_id> <node2_id> [<port1> <port2>]
+        Usage: disconnect [<time_slice>] <node1> <node2> [<port1> <port2>]
+        e.g.   disconnect 0 1 2   or   disconnect 0 h1 h2
 ```
 Example:
-- `connect 1 0 3`
-- `connect 1 h0 h3` 
-Both commands add a connection at time slice `1` between `h0` and `h3`.
+- `disconnect 0 0 3`
+- `disconnect 0 h0 h3`
+
+Both commands remove the connection at time slice `0` between `h0` and `h3`.
+
+And similarly:
+```text
+OpenOptics> help connect
+Connect two nodes by reconfiguring OCS.
+
+        Usage: connect [<time_slice>] <node1> <node2> [<port1> <port2>]
+        e.g.   connect 0 1 2   or   connect 0 h1 h2
+```
+Example:
+- `connect 0 0 3`
+- `connect 0 h0 h3`
+
+Both commands add a connection at time slice `0` between `h0` and `h3`.
+
+(Traffic-aware mode runs a single dynamic time slice, so the time-slice
+argument must be `0`.)
 
 
 ## Automatic Topology Generation
 
 Manual reconfiguration works, but it would be much better if the network could adapt automatically.
 
-The following script demonstrates this using `OpticalTopo.bipartite_matching` which generates topologies dynamically based on runtime traffic metrics, and using `net.start_traffic_aware(OpticalTopo.bipartite_matching, update_interval=2)` to configure topology update condition, e.g. every 2 seconds.
+The following script demonstrates this using `OpticalTopo.bipartite_matching` to regenerate topologies from runtime traffic metrics, paired with `OpticalRouting.routing_direct_ta`. `net.start_traffic_aware(...)` reapplies the new topology and routing every `update_interval` seconds.
 
 Run the script with:
 ```bash
-python3 tutorials/6-traffic-aware-2.py
+python3 6-traffic-aware-2.py
 ```
 
 After starting the script, try `ping` between random pairs of nodes.

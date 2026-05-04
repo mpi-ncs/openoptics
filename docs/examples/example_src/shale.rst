@@ -2,7 +2,7 @@ Shale
 ==================
 
 This example demonstrates how to use OpenOptics to implement the Shale [1]_ oblivious reconfigurable network topology.
-Shale routing is under development.
+Routing for Shale is still under development; today the example just constructs and visualizes the topology.
 
 .. literalinclude:: ../../../examples/mininet_topo_shale.py
    :language: python

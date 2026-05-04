@@ -198,7 +198,8 @@ parameters are only accepted when `backend="Tofino"` (they flow through
 `**backend_kwargs` and are validated against `TofinoBackend.accepted_kwargs()`).
 The table lists the parameters most relevant to a Tofino run — see
 `BaseNetwork.__init__` for the full common set (e.g. `nb_host_per_tor`,
-`arch_mode`, `guardband_ms`, `use_webserver`, `ocs_tor_link_bw`).
+`arch_mode`, `guardband_ms`, `use_webserver`, `ocs_tor_link_bw_gbps`,
+`tor_host_link_bw_gbps`).
 
 | Parameter | Type | Scope | Description |
 |---|---|---|---|
@@ -306,7 +307,7 @@ logical ToRs, one per pipe. The OCS is emulated on a separate Tofino2.
 | ToR data plane: `time_flow_table`, calendar queues, AFC pause/resume, per-port queue-depth estimation | ✅ |
 | Admission-controlled reroute | ✅ |
 | Per-hop and source routing (≤ 2 hops) | ✅ |
-| Routing algorithms: Direct, VLB, HoHo, Opera | ✅ |
+| Routing algorithms: Direct, VLB, HoHo | ✅ |
 | Built-in CLI: `server_check`, `server_ping`, `h0 ping h1` | ✅ |
 | Dashboard for collecting testbed telemetry (queue depth, drops, per-slice stats) | 🚧 TODO |
 

@@ -12,4 +12,3 @@ runtime based on the ``backend`` parameter passed to :class:`~openoptics.Toolbox
 
 .. autoclass:: openoptics.backends.BackendBase
    :members:
-   :special-members: accepted_kwargs
