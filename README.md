@@ -32,7 +32,7 @@ Supported backends:
 
 # Quick Start
 
-OpenOptics has two installation paths — pick the one that matches the backend
+OpenOptics has three installation paths — pick the one that matches the backend
 you need.
 
 ## For the Mininet backend: Docker image + `pip install`
@@ -208,14 +208,17 @@ Note: If you're running OpenOptics at a remote machine, make sure to enable port
 
 If you use OpenOptics for your research, please cite our [paper](https://arxiv.org/abs/2411.18319):
 ```bibtex
-@misc{lei2025openopticsopenresearchframework,
-      title={OpenOptics: An Open Research Framework for Optical Data Center Networks}, 
-      author={Yiming Lei and Federico De Marchi and Jialong Li and Raj Joshi and Balakrishnan Chandrasekaran and Yiting Xia},
-      year={2025},
-      eprint={2411.18319},
-      archivePrefix={arXiv},
-      primaryClass={cs.NI},
-      url={https://arxiv.org/abs/2411.18319}, 
+@inproceedings {316650,
+author = {Yiming Lei and Federico De Marchi and Jialong Li and Raj Joshi and Shu-Ting Wang and Xiaoqi Chen and Balakrishnan Chandrasekaran and Yiting Xia},
+title = {{OpenOptics}: Enabling Open Research and Implementation of Optical Data Center Networks},
+booktitle = {23rd USENIX Symposium on Networked Systems Design and Implementation (NSDI 26)},
+year = {2026},
+isbn = {978-1-939133-54-0},
+address = {Renton, WA},
+pages = {987--1004},
+url = {https://www.usenix.org/conference/nsdi26/presentation/lei-optical},
+publisher = {USENIX Association},
+month = may
 }
 ```
 
